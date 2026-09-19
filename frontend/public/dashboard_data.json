@@ -1,0 +1,657 @@
+{
+  "generated_at": "2026-09-11T16:19:23+08:00",
+  "data_as_of": "Q1 2026 tourism / Sep 2026 CPI / 2026 population / latest OpenDOSM air pollution",
+  "sources": [
+    {
+      "name": "DOSM Domestic Tourism Survey 2025",
+      "url": "https://www.dosm.gov.my/portal-main/release-content/domestic-tourism-survey-2025"
+    },
+    {
+      "name": "DOSM Domestic Tourism Survey Q1 2026",
+      "url": "https://www.dosm.gov.my/portal-main/release-content/malaysias-domestic-tourism-survey-q12026"
+    },
+    {
+      "name": "OpenDOSM State Population",
+      "url": "https://open.dosm.gov.my/data-catalogue/population_state"
+    },
+    {
+      "name": "OpenDOSM State CPI",
+      "url": "https://open.dosm.gov.my/data-catalogue/cpi_state"
+    },
+    {
+      "name": "DOSM Q4 2025 Tourism Bulletin",
+      "url": "https://storage.dosm.gov.my/tourism/tourism_domestic_2025-q4_en.pdf"
+    },
+    {
+      "name": "OpenDOSM Monthly Air Pollutants",
+      "url": "https://open.dosm.gov.my/data-catalogue/air_pollution"
+    }
+  ],
+  "national": {
+    "visitors_2025_million": 290.1,
+    "visitors_growth_yoy": 11.5,
+    "expenditure_2025_billion": 121.3,
+    "expenditure_growth_yoy": 13.6,
+    "average_length_of_stay": 2.56,
+    "tourists_2025_million": 106.5,
+    "state_sum_visitors_million": 290.1
+  },
+  "latest_quarter": {
+    "quarter": "Q1 2026",
+    "visitors_million": 74.7,
+    "visitor_yoy": 7.2,
+    "tourists_million": 27.4,
+    "expenditure_billion": 34.0,
+    "expenditure_yoy": 15.8
+  },
+  "quarterly_history": [
+    {
+      "period": "2021-Q1",
+      "year": 2021,
+      "quarter": 1,
+      "visitors_million": 14.154,
+      "expenditure_billion": 3.969,
+      "visitor_yoy": -69.63,
+      "expenditure_yoy": -73.3
+    },
+    {
+      "period": "2021-Q2",
+      "year": 2021,
+      "quarter": 2,
+      "visitors_million": 11.082,
+      "expenditure_billion": 2.161,
+      "visitor_yoy": -35.64,
+      "expenditure_yoy": -53.9
+    },
+    {
+      "period": "2021-Q3",
+      "year": 2021,
+      "quarter": 3,
+      "visitors_million": 13.47,
+      "expenditure_billion": 3.206,
+      "visitor_yoy": -61.27,
+      "expenditure_yoy": -73.7
+    },
+    {
+      "period": "2021-Q4",
+      "year": 2021,
+      "quarter": 4,
+      "visitors_million": 27.27,
+      "expenditure_billion": 9.074,
+      "visitor_yoy": -17.49,
+      "expenditure_yoy": 4.7
+    },
+    {
+      "period": "2022-Q1",
+      "year": 2022,
+      "quarter": 1,
+      "visitors_million": 36.363,
+      "expenditure_billion": 13.065,
+      "visitor_yoy": 156.9,
+      "expenditure_yoy": 229.21
+    },
+    {
+      "period": "2022-Q2",
+      "year": 2022,
+      "quarter": 2,
+      "visitors_million": 45.468,
+      "expenditure_billion": 17.653,
+      "visitor_yoy": 310.28,
+      "expenditure_yoy": 716.93
+    },
+    {
+      "period": "2022-Q3",
+      "year": 2022,
+      "quarter": 3,
+      "visitors_million": 43.0,
+      "expenditure_billion": 14.996,
+      "visitor_yoy": 219.23,
+      "expenditure_yoy": 367.67
+    },
+    {
+      "period": "2022-Q4",
+      "year": 2022,
+      "quarter": 4,
+      "visitors_million": 46.772,
+      "expenditure_billion": 18.367,
+      "visitor_yoy": 71.52,
+      "expenditure_yoy": 102.41
+    },
+    {
+      "period": "2023-Q1",
+      "year": 2023,
+      "quarter": 1,
+      "visitors_million": 49.262,
+      "expenditure_billion": 19.206,
+      "visitor_yoy": 35.5,
+      "expenditure_yoy": 47.0
+    },
+    {
+      "period": "2023-Q2",
+      "year": 2023,
+      "quarter": 2,
+      "visitors_million": 55.284,
+      "expenditure_billion": 21.878,
+      "visitor_yoy": 21.6,
+      "expenditure_yoy": 23.93
+    },
+    {
+      "period": "2023-Q3",
+      "year": 2023,
+      "quarter": 3,
+      "visitors_million": 54.165,
+      "expenditure_billion": 20.07,
+      "visitor_yoy": 26.0,
+      "expenditure_yoy": 33.84
+    },
+    {
+      "period": "2023-Q4",
+      "year": 2023,
+      "quarter": 4,
+      "visitors_million": 55.032,
+      "expenditure_billion": 23.778,
+      "visitor_yoy": 17.7,
+      "expenditure_yoy": 29.46
+    },
+    {
+      "period": "2024-Q1",
+      "year": 2024,
+      "quarter": 1,
+      "visitors_million": 58.614,
+      "expenditure_billion": 24.063,
+      "visitor_yoy": 18.98,
+      "expenditure_yoy": 25.29
+    },
+    {
+      "period": "2024-Q2",
+      "year": 2024,
+      "quarter": 2,
+      "visitors_million": 68.439,
+      "expenditure_billion": 28.136,
+      "visitor_yoy": 23.79,
+      "expenditure_yoy": 28.61
+    },
+    {
+      "period": "2024-Q3",
+      "year": 2024,
+      "quarter": 3,
+      "visitors_million": 66.256,
+      "expenditure_billion": 25.562,
+      "visitor_yoy": 22.32,
+      "expenditure_yoy": 27.36
+    },
+    {
+      "period": "2024-Q4",
+      "year": 2024,
+      "quarter": 4,
+      "visitors_million": 66.817,
+      "expenditure_billion": 28.985,
+      "visitor_yoy": 21.42,
+      "expenditure_yoy": 21.9
+    },
+    {
+      "period": "2025-Q1",
+      "year": 2025,
+      "quarter": 1,
+      "visitors_million": 69.678,
+      "expenditure_billion": 29.384,
+      "visitor_yoy": 18.88,
+      "expenditure_yoy": 22.11
+    },
+    {
+      "period": "2025-Q2",
+      "year": 2025,
+      "quarter": 2,
+      "visitors_million": 73.753,
+      "expenditure_billion": 29.206,
+      "visitor_yoy": 7.76,
+      "expenditure_yoy": 3.8
+    },
+    {
+      "period": "2025-Q3",
+      "year": 2025,
+      "quarter": 3,
+      "visitors_million": 72.604,
+      "expenditure_billion": 29.84,
+      "visitor_yoy": 9.6,
+      "expenditure_yoy": 16.7
+    },
+    {
+      "period": "2025-Q4",
+      "year": 2025,
+      "quarter": 4,
+      "visitors_million": 74.03,
+      "expenditure_billion": 32.566,
+      "visitor_yoy": 10.79,
+      "expenditure_yoy": 12.4
+    },
+    {
+      "period": "2026-Q1",
+      "year": 2026,
+      "quarter": 1,
+      "visitors_million": 74.665,
+      "expenditure_billion": 34.039,
+      "visitor_yoy": 7.16,
+      "expenditure_yoy": 15.84
+    }
+  ],
+  "forecast": {
+    "status": "ok",
+    "metric": "Domestic visitors",
+    "unit": "million visitors per quarter",
+    "horizon": [
+      {
+        "period": "2026-Q2",
+        "forecast_million": 76.37,
+        "lower_million": 73.22,
+        "upper_million": 79.52
+      },
+      {
+        "period": "2026-Q3",
+        "forecast_million": 75.07,
+        "lower_million": 71.92,
+        "upper_million": 78.23
+      },
+      {
+        "period": "2026-Q4",
+        "forecast_million": 76.33,
+        "lower_million": 73.18,
+        "upper_million": 79.48
+      },
+      {
+        "period": "2027-Q1",
+        "forecast_million": 77.45,
+        "lower_million": 74.3,
+        "upper_million": 80.61
+      }
+    ],
+    "selected_model": "Ensemble: Damped ETS + AutoReg",
+    "backtest": {
+      "holdout_quarters": 4,
+      "selected_model": "Damped ETS",
+      "candidates": {
+        "Seasonal naive": {
+          "mae": 5.966,
+          "rmse": 6.03
+        },
+        "Damped ETS": {
+          "mae": 1.27,
+          "rmse": 1.672
+        },
+        "AutoReg": {
+          "mae": 4.085,
+          "rmse": 4.153
+        }
+      }
+    },
+    "explainability": [
+      {
+        "driver": "Recent demand momentum",
+        "direction": "up",
+        "contribution": 17.9,
+        "detail": "Latest four-quarter change: +7.2%"
+      },
+      {
+        "driver": "Quarterly seasonality",
+        "direction": "stable",
+        "contribution": 31.0,
+        "detail": "Model retains recurring Q1?Q4 demand pattern from DOSM history."
+      },
+      {
+        "driver": "Backtest uncertainty",
+        "direction": "watch",
+        "contribution": 6.4,
+        "detail": "Typical holdout error: ?1.6 million visitors."
+      }
+    ]
+  },
+  "environment": {
+    "source": "OpenDOSM Monthly Air Pollutants",
+    "latest": {
+      "CO": {
+        "latest_month": "2022-12-01",
+        "rolling_12m_mean": 0.528,
+        "baseline_mean": 0.591,
+        "stress_score": 23.3
+      },
+      "NO2": {
+        "latest_month": "2022-12-01",
+        "rolling_12m_mean": 0.006,
+        "baseline_mean": 0.007,
+        "stress_score": 35.1
+      },
+      "O3": {
+        "latest_month": "2022-12-01",
+        "rolling_12m_mean": 0.015,
+        "baseline_mean": 0.017,
+        "stress_score": 25.2
+      },
+      "PM 10": {
+        "latest_month": "2022-12-01",
+        "rolling_12m_mean": 19.753,
+        "baseline_mean": 23.847,
+        "stress_score": 7.1
+      },
+      "PM 2.5": {
+        "latest_month": "2022-12-01",
+        "rolling_12m_mean": 12.261,
+        "baseline_mean": 14.846,
+        "stress_score": 6.5
+      },
+      "SO2": {
+        "latest_month": "2022-12-01",
+        "rolling_12m_mean": 0.001,
+        "baseline_mean": 0.001,
+        "stress_score": 54.3
+      }
+    },
+    "stress_score": 25.2,
+    "scope_note": "National environmental context; state-level monitoring is not published in this extract."
+  },
+  "states": [
+    {
+      "state": "Putrajaya",
+      "population_million": 0.121,
+      "visitors_2024_million": 2.557,
+      "visitors_2025_million": 3.146,
+      "tourists_2025_million": 0.906,
+      "visitor_growth_yoy": 23.1,
+      "tourist_mix_pct": 28.8,
+      "visitors_per_100_residents": 2591.8,
+      "cpi_yoy": 1.84,
+      "cpi_date": "2026-07-01",
+      "population_date": "2026-01-01",
+      "pressure_score": 82,
+      "prosperity_score": 54,
+      "quadrant": "Manage growth",
+      "action": "Capacity-first growth",
+      "action_detail": "Protect service capacity, time-shift demand and grow only with safeguards.",
+      "confidence": "High"
+    },
+    {
+      "state": "Kuala Lumpur",
+      "population_million": 2.082,
+      "visitors_2024_million": 26.983,
+      "visitors_2025_million": 35.06,
+      "tourists_2025_million": 10.079,
+      "visitor_growth_yoy": 29.9,
+      "tourist_mix_pct": 28.7,
+      "visitors_per_100_residents": 1683.7,
+      "cpi_yoy": 2.15,
+      "cpi_date": "2026-07-01",
+      "population_date": "2026-01-01",
+      "pressure_score": 71,
+      "prosperity_score": 47,
+      "quadrant": "Manage growth",
+      "action": "Capacity-first growth",
+      "action_detail": "Protect service capacity, time-shift demand and grow only with safeguards.",
+      "confidence": "High"
+    },
+    {
+      "state": "Melaka",
+      "population_million": 1.057,
+      "visitors_2024_million": 19.128,
+      "visitors_2025_million": 20.832,
+      "tourists_2025_million": 7.179,
+      "visitor_growth_yoy": 8.9,
+      "tourist_mix_pct": 34.5,
+      "visitors_per_100_residents": 1970.1,
+      "cpi_yoy": 1.76,
+      "cpi_date": "2026-07-01",
+      "population_date": "2026-01-01",
+      "pressure_score": 52,
+      "prosperity_score": 37,
+      "quadrant": "Protect value",
+      "action": "Stabilise first",
+      "action_detail": "Avoid broad demand stimulation until pressure and value signals improve.",
+      "confidence": "High"
+    },
+    {
+      "state": "Labuan",
+      "population_million": 0.101,
+      "visitors_2024_million": 0.45,
+      "visitors_2025_million": 0.604,
+      "tourists_2025_million": 0.267,
+      "visitor_growth_yoy": 34.4,
+      "tourist_mix_pct": 44.1,
+      "visitors_per_100_residents": 597.8,
+      "cpi_yoy": 2.01,
+      "cpi_date": "2026-07-01",
+      "population_date": "2026-01-01",
+      "pressure_score": 50,
+      "prosperity_score": 54,
+      "quadrant": "Manage growth",
+      "action": "Capacity-first growth",
+      "action_detail": "Protect service capacity, time-shift demand and grow only with safeguards.",
+      "confidence": "High"
+    },
+    {
+      "state": "Pahang",
+      "population_million": 1.686,
+      "visitors_2024_million": 20.174,
+      "visitors_2025_million": 23.161,
+      "tourists_2025_million": 11.046,
+      "visitor_growth_yoy": 14.8,
+      "tourist_mix_pct": 47.7,
+      "visitors_per_100_residents": 1373.6,
+      "cpi_yoy": 2.34,
+      "cpi_date": "2026-07-01",
+      "population_date": "2026-01-01",
+      "pressure_score": 50,
+      "prosperity_score": 51,
+      "quadrant": "Manage growth",
+      "action": "Capacity-first growth",
+      "action_detail": "Protect service capacity, time-shift demand and grow only with safeguards.",
+      "confidence": "High"
+    },
+    {
+      "state": "Negeri Sembilan",
+      "population_million": 1.248,
+      "visitors_2024_million": 17.785,
+      "visitors_2025_million": 19.357,
+      "tourists_2025_million": 6.547,
+      "visitor_growth_yoy": 8.8,
+      "tourist_mix_pct": 33.8,
+      "visitors_per_100_residents": 1550.4,
+      "cpi_yoy": 2.48,
+      "cpi_date": "2026-07-01",
+      "population_date": "2026-01-01",
+      "pressure_score": 49,
+      "prosperity_score": 29,
+      "quadrant": "Build readiness",
+      "action": "Product and access pilot",
+      "action_detail": "Fix readiness gaps before committing to broad promotion.",
+      "confidence": "High"
+    },
+    {
+      "state": "Perlis",
+      "population_million": 0.297,
+      "visitors_2024_million": 3.225,
+      "visitors_2025_million": 3.756,
+      "tourists_2025_million": 1.475,
+      "visitor_growth_yoy": 16.4,
+      "tourist_mix_pct": 39.3,
+      "visitors_per_100_residents": 1263.3,
+      "cpi_yoy": 1.27,
+      "cpi_date": "2026-07-01",
+      "population_date": "2026-01-01",
+      "pressure_score": 39,
+      "prosperity_score": 40,
+      "quadrant": "Grow selectively",
+      "action": "Targeted promotion",
+      "action_detail": "Route measured demand here and onboard local businesses.",
+      "confidence": "High"
+    },
+    {
+      "state": "Terengganu",
+      "population_million": 1.261,
+      "visitors_2024_million": 14.461,
+      "visitors_2025_million": 15.462,
+      "tourists_2025_million": 5.24,
+      "visitor_growth_yoy": 6.9,
+      "tourist_mix_pct": 33.9,
+      "visitors_per_100_residents": 1226.3,
+      "cpi_yoy": 1.79,
+      "cpi_date": "2026-07-01",
+      "population_date": "2026-01-01",
+      "pressure_score": 33,
+      "prosperity_score": 22,
+      "quadrant": "Build readiness",
+      "action": "Product and access pilot",
+      "action_detail": "Fix readiness gaps before committing to broad promotion.",
+      "confidence": "High"
+    },
+    {
+      "state": "Pulau Pinang",
+      "population_million": 1.808,
+      "visitors_2024_million": 16.605,
+      "visitors_2025_million": 17.718,
+      "tourists_2025_million": 5.63,
+      "visitor_growth_yoy": 6.7,
+      "tourist_mix_pct": 31.8,
+      "visitors_per_100_residents": 979.8,
+      "cpi_yoy": 1.6,
+      "cpi_date": "2026-07-01",
+      "population_date": "2026-01-01",
+      "pressure_score": 26,
+      "prosperity_score": 15,
+      "quadrant": "Build readiness",
+      "action": "Product and access pilot",
+      "action_detail": "Fix readiness gaps before committing to broad promotion.",
+      "confidence": "High"
+    },
+    {
+      "state": "Kedah",
+      "population_million": 2.237,
+      "visitors_2024_million": 14.651,
+      "visitors_2025_million": 15.608,
+      "tourists_2025_million": 7.125,
+      "visitor_growth_yoy": 6.5,
+      "tourist_mix_pct": 45.6,
+      "visitors_per_100_residents": 697.6,
+      "cpi_yoy": 2.27,
+      "cpi_date": "2026-07-01",
+      "population_date": "2026-01-01",
+      "pressure_score": 25,
+      "prosperity_score": 29,
+      "quadrant": "Build readiness",
+      "action": "Product and access pilot",
+      "action_detail": "Fix readiness gaps before committing to broad promotion.",
+      "confidence": "High"
+    },
+    {
+      "state": "Perak",
+      "population_million": 2.578,
+      "visitors_2024_million": 21.776,
+      "visitors_2025_million": 23.642,
+      "tourists_2025_million": 10.414,
+      "visitor_growth_yoy": 8.6,
+      "tourist_mix_pct": 44.0,
+      "visitors_per_100_residents": 917.1,
+      "cpi_yoy": 1.16,
+      "cpi_date": "2026-07-01",
+      "population_date": "2026-01-01",
+      "pressure_score": 22,
+      "prosperity_score": 33,
+      "quadrant": "Build readiness",
+      "action": "Product and access pilot",
+      "action_detail": "Fix readiness gaps before committing to broad promotion.",
+      "confidence": "High"
+    },
+    {
+      "state": "Sabah",
+      "population_million": 3.767,
+      "visitors_2024_million": 20.592,
+      "visitors_2025_million": 22.361,
+      "tourists_2025_million": 7.36,
+      "visitor_growth_yoy": 8.6,
+      "tourist_mix_pct": 32.9,
+      "visitors_per_100_residents": 593.6,
+      "cpi_yoy": 1.86,
+      "cpi_date": "2026-07-01",
+      "population_date": "2026-01-01",
+      "pressure_score": 21,
+      "prosperity_score": 12,
+      "quadrant": "Build readiness",
+      "action": "Product and access pilot",
+      "action_detail": "Fix readiness gaps before committing to broad promotion.",
+      "confidence": "High"
+    },
+    {
+      "state": "Sarawak",
+      "population_million": 2.54,
+      "visitors_2024_million": 19.626,
+      "visitors_2025_million": 22.722,
+      "tourists_2025_million": 6.33,
+      "visitor_growth_yoy": 15.8,
+      "tourist_mix_pct": 27.9,
+      "visitors_per_100_residents": 894.6,
+      "cpi_yoy": 0.31,
+      "cpi_date": "2026-07-01",
+      "population_date": "2026-01-01",
+      "pressure_score": 21,
+      "prosperity_score": 18,
+      "quadrant": "Build readiness",
+      "action": "Product and access pilot",
+      "action_detail": "Fix readiness gaps before committing to broad promotion.",
+      "confidence": "High"
+    },
+    {
+      "state": "Kelantan",
+      "population_million": 1.925,
+      "visitors_2024_million": 10.514,
+      "visitors_2025_million": 12.062,
+      "tourists_2025_million": 6.512,
+      "visitor_growth_yoy": 14.7,
+      "tourist_mix_pct": 54.0,
+      "visitors_per_100_residents": 626.5,
+      "cpi_yoy": 0.93,
+      "cpi_date": "2026-07-01",
+      "population_date": "2026-01-01",
+      "pressure_score": 20,
+      "prosperity_score": 48,
+      "quadrant": "Grow selectively",
+      "action": "Targeted promotion",
+      "action_detail": "Route measured demand here and onboard local businesses.",
+      "confidence": "High"
+    },
+    {
+      "state": "Johor",
+      "population_million": 4.224,
+      "visitors_2024_million": 17.138,
+      "visitors_2025_million": 18.197,
+      "tourists_2025_million": 9.822,
+      "visitor_growth_yoy": 6.2,
+      "tourist_mix_pct": 54.0,
+      "visitors_per_100_residents": 430.8,
+      "cpi_yoy": 2.09,
+      "cpi_date": "2026-07-01",
+      "population_date": "2026-01-01",
+      "pressure_score": 17,
+      "prosperity_score": 36,
+      "quadrant": "Build readiness",
+      "action": "Product and access pilot",
+      "action_detail": "Fix readiness gaps before committing to broad promotion.",
+      "confidence": "High"
+    },
+    {
+      "state": "Selangor",
+      "population_million": 7.454,
+      "visitors_2024_million": 34.461,
+      "visitors_2025_million": 36.376,
+      "tourists_2025_million": 10.596,
+      "visitor_growth_yoy": 5.6,
+      "tourist_mix_pct": 29.1,
+      "visitors_per_100_residents": 488.0,
+      "cpi_yoy": 1.77,
+      "cpi_date": "2026-07-01",
+      "population_date": "2026-01-01",
+      "pressure_score": 15,
+      "prosperity_score": 3,
+      "quadrant": "Build readiness",
+      "action": "Product and access pilot",
+      "action_detail": "Fix readiness gaps before committing to broad promotion.",
+      "confidence": "High"
+    }
+  ]
+}
