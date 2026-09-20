@@ -215,7 +215,7 @@ def forecast_history(history):
     momentum = (y[-1]/y[-5]-1)*100 if y[-5] else 0
     return {"status":"ok", "metric":"Domestic visitors", "unit":"million visitors per quarter", "horizon":horizon,
         "selected_model":"Ensemble: " + " + ".join(ordered[:2]), "backtest":{"holdout_quarters":len(test),"selected_model":ordered[0],"candidates":metrics},
-        "explainability":[{"driver":"Recent demand momentum","direction":"up" if momentum>=0 else "down","contribution":round(min(100,abs(momentum)*2.5),1),"detail":f"Latest four-quarter change: {momentum:+.1f}%"},{"driver":"Quarterly seasonality","direction":"stable","contribution":31.0,"detail":"Model retains recurring Q1?Q4 demand pattern from DOSM history."},{"driver":"Backtest uncertainty","direction":"watch","contribution":round(min(100,spread*4),1),"detail":f"Typical holdout error: ?{spread:.1f} million visitors."}]}
+        "explainability":[{"driver":"Recent demand momentum","direction":"up" if momentum>=0 else "down","contribution":round(min(100,abs(momentum)*2.5),1),"detail":f"Latest four-quarter change: {momentum:+.1f}%"},{"driver":"Quarterly seasonality","direction":"stable","contribution":31.0,"detail":"Model retains recurring Q1–Q4 demand pattern from DOSM history."},{"driver":"Backtest uncertainty","direction":"watch","contribution":round(min(100,spread*4),1),"detail":f"Typical holdout error: ±{spread:.1f} million visitors."}]}
 
 def build():
     population = load_population()
@@ -293,7 +293,7 @@ def build():
     total_tourists = sum(r["tourists_2025_million"] for r in records)
     payload = {
         "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
-        "data_as_of": "Q1 2026 tourism / Sep 2026 CPI / 2026 population / latest OpenDOSM air pollution",
+        "data_as_of": "Q1 2026 tourism / Sep 2026 CPI / 2026 population / Dec 2022 OpenDOSM air quality",
         "sources": [
             {"name": "DOSM Domestic Tourism Survey 2025", "url": "https://www.dosm.gov.my/portal-main/release-content/domestic-tourism-survey-2025"},
             {"name": "DOSM Domestic Tourism Survey Q1 2026", "url": "https://www.dosm.gov.my/portal-main/release-content/malaysias-domestic-tourism-survey-q12026"},

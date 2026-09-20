@@ -1,7 +1,7 @@
 'use client'
 
 import { AlertTriangle, Bell, CheckCircle2, X } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLanguage } from '../lib/i18n'
 
 type Alert = {
@@ -27,6 +27,25 @@ export function AlertPanel({ alerts, onSelectState }: { alerts: Alert[]; onSelec
   const { t, translateSeverity, lang } = useLanguage()
   const [dismissed, setDismissed] = useState<Record<string, boolean>>({})
   const [open, setOpen] = useState(false)
+  const wrapRef = useRef<HTMLDivElement>(null)
+
+  // The dropdown used to stay open until the bell was clicked again - no
+  // outside click, no Escape.
+  useEffect(() => {
+    if (!open) return
+    function onPointerDown(event: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(event.target as Node)) setOpen(false)
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open])
 
   const active = alerts.filter((a) => !dismissed[a.alert_id])
   const highCount = active.filter((a) => a.severity === 'high').length
@@ -34,12 +53,13 @@ export function AlertPanel({ alerts, onSelectState }: { alerts: Alert[]; onSelec
   if (alerts.length === 0) return null
 
   return (
-    <div className="alert-panel-wrap">
+    <div className="alert-panel-wrap" ref={wrapRef}>
       <button
         type="button"
         className={`alert-bell-btn ${highCount > 0 ? 'has-alerts' : ''}`}
         onClick={() => setOpen(!open)}
         aria-label={`${active.length} ${t('alertsTitle')}`}
+        aria-expanded={open}
       >
         <Bell size={18} />
         {active.length > 0 && <span className="alert-count">{active.length}</span>}

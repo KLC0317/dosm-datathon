@@ -207,6 +207,24 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 600; margin: 0; letter
   user-select: none;
   text-decoration: none;
 }
+/* Keyboard focus was visible on exactly one element (.brand). Everything else
+   fell back to the UA outline, which the custom surfaces largely swallowed. */
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--teal-600);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.region-map-svg g:focus-visible,
+.cartogram-card:focus-visible,
+.ft-card:focus-visible {
+  outline: 2px solid var(--teal-600);
+  outline-offset: 3px;
+}
+
+/* .confidence styled .high and .medium only, so a low-confidence state would
+   have rendered as though it were high */
+.confidence.low { color: var(--rust-700); background: var(--rust-200); border-color: var(--rust-200); }
+
 .brand:focus-visible {
   outline: 2px solid var(--teal-600);
   outline-offset: 4px;
@@ -454,7 +472,7 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 600; margin: 0; letter
 .primary-button { background: var(--teal-800); border-color: var(--teal-800); color: var(--card); }
 .primary-button:hover { background: var(--teal-700); }
 .full { width: 100%; justify-content: center; margin-top: 16px; padding: 12px; }
-.more-button { border: 0; color: var(--accent-ink); padding: 0; font-size: 0.82rem; }
+.more-button { border: 0; color: var(--accent-ink); padding: 4px 0; min-height: 24px; font-size: 0.82rem; }
 
 /* ---------- stat cards ------------------------------------------------------ */
 
@@ -581,21 +599,24 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 600; margin: 0; letter
 
 .stat-footer {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px 8px;
   padding-top: 10px;
   border-top: 1px solid rgba(22, 32, 28, 0.06);
   font-size: 0.76rem;
 }
 
+/* the badge used to squeeze this into a half-width column, so the note was
+   always ellipsised; it now claims a line of its own when there is no room */
 .stat-note {
+  flex: 1 1 150px;
+  min-width: 0;
   color: var(--ink-soft);
   font-size: 0.75rem;
   font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.3;
 }
 
 /* Modern clean trend and status badges */
@@ -783,6 +804,28 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 600; margin: 0; letter
   background: var(--ochre-100);
   color: var(--accent-ink);
 }
+/* Quadrant colour coding. quadrantClass() has always emitted these four
+   modifiers onto .posture-tag and .posture-pill, but no rule ever matched
+   them, so every posture chip rendered flat grey while the same four
+   categories were colour-coded in the scatter, the matrix and the posture
+   list. Same hues as PortfolioVega and the Method tab's quadrant table. */
+.posture-tag.manage-growth,
+.posture-pill.manage-growth { background: var(--rust-200); color: var(--rust-700); }
+.posture-tag.grow-selectively,
+.posture-pill.grow-selectively { background: var(--teal-100); color: var(--teal-700); }
+.posture-tag.protect-value,
+.posture-pill.protect-value { background: var(--ochre-100); color: var(--ochre-700); }
+.posture-tag.build-readiness,
+.posture-pill.build-readiness { background: var(--slate-100); color: var(--ink-soft); }
+
+/* on the dark map banner the light fills above would vanish, so the tag keeps
+   a translucent backing and tints the text instead */
+.dual-map-banner .posture-tag { background: rgba(255, 255, 255, 0.16); }
+.dual-map-banner .posture-tag.manage-growth { color: var(--rust-200); }
+.dual-map-banner .posture-tag.grow-selectively { color: var(--teal-200); }
+.dual-map-banner .posture-tag.protect-value { color: var(--ochre-200); }
+.dual-map-banner .posture-tag.build-readiness { color: var(--slate-300); }
+
 .zoom-tag { font-size: 0.66rem; font-weight: 700; color: var(--accent-ink); background: var(--ochre-100); padding: 3px 8px; border-radius: 99px; }
 .zoom-pill-btn {
   display: flex;
@@ -844,7 +887,7 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 600; margin: 0; letter
 
 /* FT epicenter cards */
 .ft-cards-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-.ft-card { border: 1px solid var(--rule); border-radius: var(--radius-sm); background: var(--card-2); padding: 16px; cursor: pointer; }
+.ft-card { border: 1px solid var(--rule); border-radius: var(--radius-sm); background: var(--card-2); padding: 16px; cursor: pointer; width: 100%; text-align: left; color: inherit; font: inherit; display: block; }
 .ft-card.selected { border-color: var(--accent-ink); background: var(--ochre-100); }
 .ft-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
 .ft-card-top h3 { font-size: 1.05rem; margin: 4px 0 2px; }
@@ -893,6 +936,8 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 600; margin: 0; letter
 .priority-score { font-family: var(--font-serif); font-size: 1.2rem; text-align: right; line-height: 0.9; }
 .priority-score small { display: block; color: var(--muted); font-size: 0.6rem; margin-top: 4px; font-weight: 400; }
 .priority-item > svg { color: var(--slate-500); flex-shrink: 0; }
+.priority-panel { display: flex; flex-direction: column; }
+.priority-panel .priority-list { flex: 1; }
 .queue-note {
   display: flex;
   gap: 8px;
@@ -909,7 +954,7 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 600; margin: 0; letter
 /* ---------- state leaders --------------------------------------------------- */
 
 .top-states-panel { min-height: 300px; }
-.state-leader-layout { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 24px; align-items: center; margin-top: 16px; }
+.state-leader-layout { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 24px; align-items: start; margin-top: 16px; }
 .state-flags { display: grid; gap: 9px; }
 .state-flag {
   display: grid;
@@ -946,7 +991,7 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 600; margin: 0; letter
 
 /* ---------- decision matrix + profile -------------------------------------- */
 
-.lower-row { grid-template-columns: minmax(0, 1.2fr) minmax(340px, 0.8fr); }
+.lower-row { grid-template-columns: minmax(0, 1.2fr) minmax(340px, 0.8fr); align-items: start; }
 .quadrant-panel, .profile-panel { min-height: 400px; }
 .matrix-vega { min-height: 350px; }
 
@@ -972,11 +1017,33 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 600; margin: 0; letter
 .score-card-top strong { font-family: var(--font-serif); color: var(--ink); font-size: 1.35rem; letter-spacing: -0.02em; }
 .score-card-top small { color: var(--muted); font-size: 0.7rem; margin-left: 2px; }
 .score-card .score-row > div:first-child { display: none; }
-.score-card .score-track { height: 8px; border-radius: 99px; }
+.score-card .score-track { height: 10px; border-radius: 99px; }
 .score-card p { color: var(--muted); font-size: 0.74rem; line-height: 1.35; margin: 8px 0 0; }
 .score-row > div:first-child { display: flex; justify-content: space-between; color: var(--muted); font-size: 0.78rem; margin-bottom: 6px; }
 .score-row strong { color: var(--ink); }
-.score-track { height: 6px; border-radius: 99px; background: var(--slate-100); overflow: hidden; }
+.score-track {
+  position: relative;
+  height: 8px;
+  border-radius: 99px;
+  background: var(--slate-100);
+  overflow: hidden;
+}
+.score-track-fill {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+/* the 55 / 75 boundaries between balanced, watch and high pressure — same
+   bands as the map legend, so a score can be read against a scale */
+.score-band-tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(22, 31, 27, 0.18);
+  z-index: 1;
+}
 
 .metric-line {
   display: flex;
@@ -988,7 +1055,9 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 600; margin: 0; letter
   color: var(--muted);
   font-size: 0.78rem;
 }
-.metric-line span { display: grid; gap: 5px; }
+/* grid items stretch by default, which made the compact status badge render
+   as a full-width empty pill under each figure */
+.metric-line span { display: grid; gap: 5px; justify-items: start; }
 .metric-line strong { color: var(--ink); font-size: 0.92rem; }
 .metric-line .green { color: var(--status-good); }
 
@@ -1014,6 +1083,7 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 600; margin: 0; letter
   flex-direction: column;
   justify-content: center;
   width: 100%;
+  min-width: 0;
   min-height: 270px;
 }
 
@@ -1133,6 +1203,16 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 600; margin: 0; letter
   white-space: nowrap;
 }
 
+/* score badge + data-vintage badge, stacked so the stale marker sits with the
+   number it qualifies rather than floating in the heading row */
+.env-badge-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
 .env-badge-low small {
   font-size: 0.68rem;
   opacity: 0.85;
@@ -1154,6 +1234,7 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 600; margin: 0; letter
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-width: 0;
 }
 
 /* ---------- portfolio posture breakdown & evidence matrix ----------------- */
@@ -1253,6 +1334,15 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 600; margin: 0; letter
   flex-direction: column;
   gap: 8px;
   margin-top: 4px;
+  min-width: 0;
+}
+
+/* the 5-column matrix cannot shrink below ~400px, so let it scroll inside its
+   own card rather than widening the page */
+.matrix-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  min-width: 0;
 }
 
 .matrix-legend {
@@ -1388,11 +1478,14 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 600; margin: 0; letter
 .scenario-orbit span, .method-seal span { font-size: 0.72rem; color: var(--muted); line-height: 1.3; }
 .scenario-orbit strong, .method-seal strong { color: var(--accent-ink); font-family: var(--font-serif); }
 
-.scenario-grid, .method-grid { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 14px; margin-top: 14px; }
+.scenario-grid { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 14px; margin-top: 14px; }
+/* two prose panels of similar weight read better evenly split than in the
+   Scenario tab's 340px control column, which left one side mostly empty */
+.method-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; margin-top: 14px; align-items: start; }
 .control-panel { height: fit-content; }
 .control-panel label { display: flex; justify-content: space-between; color: var(--ink-soft); font-size: 0.84rem; margin: 22px 0 9px; line-height: 1.35; }
-.control-panel output { color: var(--accent-ink); font-weight: 700; }
-.control-panel input[type='range'] { width: 100%; accent-color: var(--accent); cursor: pointer; }
+.control-panel output { color: var(--accent-ink); font-weight: 700; white-space: nowrap; flex-shrink: 0; padding-left: 10px; }
+.control-panel input[type='range'] { width: 100%; height: 24px; accent-color: var(--accent); cursor: pointer; }
 .range-note { display: flex; justify-content: space-between; color: var(--slate-500); font-size: 0.72rem; margin-top: 4px; }
 .control-footnote { color: var(--muted); font-size: 0.78rem; line-height: 1.45; text-align: center; margin: 14px 4px 0; }
 
@@ -1484,8 +1577,6 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 600; margin: 0; letter
 /* ---------- vega-embed chrome ------------------------------------------------- */
 
 .vega-embed { width: 100%; }
-.vega-embed summary { color: var(--muted); }
-.vega-embed .vega-actions { background: var(--card); border-color: var(--rule); }
 
 /* ---------- misc utility ------------------------------------------------------ */
 
@@ -1493,25 +1584,51 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 600; margin: 0; letter
 .dot { opacity: 0.5; margin: 0 2px; }
 
 @keyframes rise { from { opacity: 0.4; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+/* referenced by six rules but never defined, so those panels animated not
+   at all while .scenario-view and .method-view used 'rise' */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 .scenario-view, .method-view { animation: rise 0.25s ease; }
 
 /* ---------- responsive: collapse to fewer columns, never scroll sideways ----- */
 
 @media (max-width: 1200px) {
-  .grid-two, .forecast-row, .portfolio-visuals, .scenario-grid, .method-grid { grid-template-columns: 1fr; }
-  .map-row { grid-template-columns: 1fr; min-height: auto; }
+  .grid-two, .forecast-row, .portfolio-visuals, .scenario-grid, .method-grid { grid-template-columns: minmax(0, 1fr); }
+  .map-row { grid-template-columns: minmax(0, 1fr); min-height: auto; }
   .map-panel, .priority-panel, .map-shell { min-height: 460px; }
   .dual-map-panels { grid-template-columns: 1fr; }
   .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cartogram-grid, .ft-cards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .state-leader-layout { grid-template-columns: 1fr; }
-  .state-flags { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .state-flags { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 900px) {
+  .state-flags { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 1160px) {
   .topbar { gap: 12px; padding: 0 16px; }
   .brand-subline { display: none; }
   .main-nav button { padding: 0 10px; font-size: 0.78rem; }
+}
+
+/* Below ~520px several nowrap flex rows were wider than the viewport, so the
+   whole document scrolled sideways (measured 490px wide at 390px). */
+@media (max-width: 620px) {
+  .map-caption { flex-direction: column; }
+  .map-controls { align-items: flex-start; width: 100%; }
+  .map-view-switcher { flex-wrap: wrap; width: 100%; }
+  .map-view-switcher button { flex: 1 1 auto; justify-content: center; }
+  .map-legend { flex-wrap: wrap; row-gap: 4px; }
+  .dual-map-banner { flex-direction: column; align-items: flex-start; }
+  .banner-stats { max-width: 100%; }
+  .banner-status-chip { flex-wrap: wrap; row-gap: 4px; }
+  .posture-item-top { flex-wrap: wrap; row-gap: 4px; }
+  .posture-badge { min-width: 0; }
+  .matrix-legend { row-gap: 4px; }
+  .forecast-foot { flex-direction: column; align-items: flex-start; }
+  .env-badge-stack { align-items: flex-start; }
+  .panel-heading { flex-wrap: wrap; }
 }
 
 @media (max-width: 768px) {
@@ -1540,11 +1657,15 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 600; margin: 0; letter
   .content { padding: 20px 14px 40px; }
   .content-heading { display: block; }
   .heading-actions { padding-top: 18px; }
-  .stat-grid { grid-template-columns: 1fr; }
+  .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cartogram-grid, .ft-cards-grid { grid-template-columns: 1fr; }
   .state-flags { grid-template-columns: 1fr; }
   .scenario-hero, .method-hero { padding: 22px; }
   .forecast-drivers { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 520px) {
+  .stat-grid { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1555,9 +1676,13 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 600; margin: 0; letter
 /* ─── @media print ────────────────────────────────────────────────────────── */
 @media print {
   .topbar, .main-nav, .top-actions, .modal-backdrop,
-  .alert-panel-wrap, .copilot-*, .theme-toggle,
+  .alert-panel-wrap, .theme-toggle,
   .icon-button, .primary-button, .outline-button,
-  .more-button, .heading-actions, button { display: none !important; }
+  .more-button, .heading-actions,
+  .main-nav button, .map-view-switcher, .lang-switcher,
+  .zoom-pill-btn, .dismiss-btn, .modal-close { display: none !important; }
+  /* expanders stay visible in print so their content is not silently lost */
+  .option-card-header, .source-card-header, .decision-card-header { display: flex !important; }
   .app-shell { background: #fff !important; color: #000 !important; }
   .panel { break-inside: avoid; border: 1px solid #ccc !important; box-shadow: none !important; }
   .content { padding: 12px !important; }
@@ -1621,7 +1746,8 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 600; margin: 0; letter
 /* ─── Policy Options View ─────────────────────────────────────────────────── */
 .policy-view { animation: fadeIn .3s ease; }
 .policy-hero { display: flex; align-items: flex-start; justify-content: space-between;
-  gap: 24px; padding: 32px 0 28px; }
+  gap: 24px; padding: 32px; background: var(--teal-100); border: 1px solid var(--teal-200);
+  border-radius: var(--radius); margin-bottom: 16px; }
 .policy-hero h2 { font-size: clamp(1.5rem,3vw,2.1rem); font-weight: 900; margin: 8px 0; line-height: 1.2; }
 .policy-hero p { color: var(--muted); max-width: 540px; line-height: 1.6; }
 .policy-seal { display: flex; align-items: center; gap: 10px; flex-shrink: 0;
@@ -1650,7 +1776,7 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 600; margin: 0; letter
 .status-reviewed { background: var(--ochre-100); color: var(--ochre-700); border: 1px solid var(--ochre-200); }
 .status-approved { background: var(--teal-100); color: var(--teal-700); border: 1px solid var(--teal-200); }
 .status-rejected { background: var(--rust-200); color: var(--rust-700); border: 1px solid var(--rust-200); }
-.option-budget { font-size: .8rem; color: var(--muted); white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+.option-budget { font-size: .8rem; color: var(--muted); max-width: 200px; line-height: 1.3; }
 .option-body { padding: 0 20px 20px 20px; border-top: 1px solid var(--rule); animation: fadeIn .2s ease; }
 .option-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; }
 @media (max-width: 680px) { .option-grid { grid-template-columns: 1fr; } }
@@ -1677,11 +1803,11 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 600; margin: 0; letter
 .toc-option-selector button.active { background: var(--teal-700); color: #fff; border-color: var(--teal-700); }
 .theory-of-change { padding: 16px 0; overflow-x: auto; }
 .toc-chain { display: flex; align-items: flex-start; gap: 0; flex-wrap: nowrap; padding: 8px 0; min-width: 600px; }
-.toc-step { display: flex; align-items: center; gap: 0; flex: 1; min-width: 120px; }
+.toc-step { display: flex; align-items: flex-start; gap: 0; flex: 1; min-width: 140px; }
 .toc-dot { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center;
   justify-content: center; color: #fff; flex-shrink: 0; }
-.toc-text { font-size: .78rem; line-height: 1.4; padding: 0 8px; color: var(--ink-soft); max-width: 120px; }
-.toc-arrow { display: flex; flex-direction: column; align-items: center; gap: 2px; flex-shrink: 0; }
+.toc-text { font-size: .78rem; line-height: 1.4; padding: 2px 8px 0; color: var(--ink-soft); max-width: 160px; }
+.toc-arrow { display: flex; flex-direction: column; align-items: center; gap: 2px; flex-shrink: 0; padding-top: 6px; }
 .toc-arrow span { font-size: 1.2rem; color: var(--muted); }
 .toc-arrow small { font-size: .65rem; color: var(--muted); white-space: nowrap; }
 .toc-caveat { font-size: .78rem; color: var(--muted); margin-top: 10px; font-style: italic; }
@@ -1695,11 +1821,16 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 600; margin: 0; letter
 .alert-count { position: absolute; top: -5px; right: -5px; min-width: 17px; height: 17px;
   background: var(--rust-700); color: #fff; border-radius: 99px; font-size: .65rem;
   font-weight: 700; display: flex; align-items: center; justify-content: center; padding: 0 3px; }
-.alert-dropdown { position: absolute; right: 0; top: calc(100% + 8px); width: 380px; max-height: 500px;
+.alert-dropdown { position: absolute; right: 0; top: calc(100% + 8px); width: min(380px, calc(100vw - 24px)); max-height: 500px;
   background: var(--card); border: 1px solid var(--rule); border-radius: 12px;
   box-shadow: 0 12px 40px rgba(0,0,0,.18); z-index: 100; display: flex; flex-direction: column; overflow: hidden; }
+.alert-dropdown { max-height: min(640px, calc(100vh - 96px)); }
 .alert-dropdown-header { display: flex; align-items: center; justify-content: space-between;
   padding: 12px 16px; border-bottom: 1px solid var(--rule); font-size: .88rem; }
+.alert-dropdown-header button { display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border: 0; background: none; cursor: pointer; color: var(--muted);
+  border-radius: 6px; }
+.alert-dropdown-header button:hover { background: var(--card-2); color: var(--ink); }
 .alert-list { overflow-y: auto; flex: 1; padding: 8px; display: flex; flex-direction: column; gap: 8px; }
 .alert-card { border-radius: 8px; border: 1px solid var(--alert-color, var(--rule)); padding: 10px 12px;
   background: color-mix(in srgb, var(--alert-color, #888) 7%, transparent); }
@@ -1712,7 +1843,7 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 600; margin: 0; letter
 .sev-medium { background: var(--ochre-100); color: var(--ochre-700); }
 .sev-low { background: var(--card-2); color: var(--muted); }
 .dismiss-btn { flex-shrink: 0; background: none; border: none; cursor: pointer; color: var(--muted);
-  width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
   border-radius: 4px; padding: 0; }
 .dismiss-btn:hover { background: var(--rule); }
 .alert-message { font-size: .8rem; color: var(--ink-soft); margin: 0 0 6px; line-height: 1.5; }
@@ -1720,7 +1851,8 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 600; margin: 0; letter
 .alert-footer { display: flex; align-items: center; justify-content: space-between; }
 .alert-footer small { font-size: .72rem; color: var(--muted); }
 .alert-select-btn { font-size: .75rem; color: var(--teal-700); background: none; border: none;
-  cursor: pointer; padding: 0; font-weight: 600; }
+  cursor: pointer; padding: 4px 0; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
+.alert-footer small { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .alert-empty { display: flex; align-items: center; gap: 8px; padding: 20px; color: var(--muted); font-size: .88rem; }
 .alert-footer-note { padding: 10px 16px; border-top: 1px solid var(--rule); display: flex; align-items: center;
   gap: 6px; font-size: .72rem; color: var(--muted); }
@@ -1763,7 +1895,7 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 600; margin: 0; letter
   color: var(--muted); display: flex; align-items: center; gap: 4px; }
 .detail-value { font-size: .82rem; color: var(--ink-soft); line-height: 1.5; }
 .source-url-link { display: inline-flex; align-items: center; gap: 6px; color: var(--teal-700);
-  font-size: .82rem; font-weight: 600; margin-top: 14px; }
+  font-size: .82rem; font-weight: 600; margin-top: 14px; min-height: 24px; }
 
 /* quality table */
 .quality-panel { margin-top: 8px; }
@@ -1782,6 +1914,22 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 600; margin: 0; letter
 .quality-row svg.warn { color: var(--ochre-700); }
 .quality-row .fail { color: var(--rust-700); font-weight: 700; }
 .refresh-date { font-size: .75rem; color: var(--muted); }
+/* dataset id plus its full name, which used to live only in a title tooltip */
+.quality-row > span:first-child { flex-direction: column; align-items: flex-start; gap: 1px; }
+.quality-row > span:first-child strong { font-size: .8rem; }
+.quality-row > span:first-child small { font-size: .68rem; color: var(--muted); line-height: 1.25; }
+/* the table was a grid of bare ticks with nothing saying what they meant */
+.quality-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-top: 10px;
+  font-size: .74rem;
+  color: var(--muted);
+}
+.quality-key span { display: inline-flex; align-items: center; gap: 5px; }
+.quality-key svg.ok { color: var(--teal-700); }
+.quality-key svg.warn { color: var(--ochre-700); }
 
 /* data dictionary */
 .dict-panel { margin-top: 8px; }
@@ -1814,7 +1962,8 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 600; margin: 0; letter
 /* ─── Decision Register ───────────────────────────────────────────────────── */
 .decision-view { animation: fadeIn .3s ease; }
 .decision-hero { display: flex; align-items: flex-start; justify-content: space-between;
-  gap: 24px; padding: 32px 0 28px; }
+  gap: 24px; padding: 32px; background: var(--teal-100); border: 1px solid var(--teal-200);
+  border-radius: var(--radius); margin-bottom: 16px; }
 .decision-hero h2 { font-size: clamp(1.5rem,3vw,2.1rem); font-weight: 900; margin: 8px 0; line-height: 1.2; }
 .decision-hero p { color: var(--muted); max-width: 540px; line-height: 1.6; }
 .decision-controls { display: flex; align-items: center; justify-content: space-between; gap: 12px;
@@ -1882,7 +2031,8 @@ h1, h2, h3 { font-family: var(--font-serif); font-weight: 600; margin: 0; letter
 .lang-btn {
   background: transparent;
   border: none;
-  padding: 3px 7px;
+  min-height: 24px;
+  padding: 4px 8px;
   font-size: 0.72rem;
   font-weight: 700;
   color: var(--muted);

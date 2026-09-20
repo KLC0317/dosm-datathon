@@ -70,13 +70,13 @@ function DecisionCard({ decision }: { decision: Decision }) {
         <div className="decision-body">
           <div className="decision-grid">
             <DecField label={lang === 'ms' ? 'Destinasi' : 'Destination'} value={decision.destination} />
-            <DecField label={lang === 'ms' ? 'Tempoh asas' : 'Baseline period'} value={decision.baseline_period} />
+            <DecField label={lang === 'ms' ? 'Tempoh asas' : 'Data used'} value={decision.baseline_period} />
             <DecField label={lang === 'ms' ? 'Pegawai bertanggungjawab' : 'Responsible owner'} value={decision.responsible_owner} />
             <DecField label={lang === 'ms' ? 'Penyemak' : 'Reviewer'} value={decision.reviewer} />
             <DecField label={lang === 'ms' ? 'Peruntukan' : 'Budget'} value={decision.budget} />
-            <DecField label={lang === 'ms' ? 'Tarikh semakan hasil' : 'Outcome review date'} value={decision.outcome_review_date} />
-            <DecField label={lang === 'ms' ? 'Versi bukti' : 'Evidence version'} value={decision.evidence_version} />
-            <DecField label={lang === 'ms' ? 'Versi model' : 'Model version'} value={decision.model_version} />
+            <DecField label={lang === 'ms' ? 'Tarikh semakan hasil' : 'When we check the result'} value={decision.outcome_review_date} />
+            <DecField label={lang === 'ms' ? 'Versi bukti' : 'Data snapshot'} value={decision.evidence_version} />
+            <DecField label={lang === 'ms' ? 'Versi model' : 'Scoring version'} value={decision.model_version} />
             <DecField label={lang === 'ms' ? 'Pelaksanaan' : 'Implementation'} value={`${decision.implementation_dates.start} → ${decision.implementation_dates.end}`} />
           </div>
 
@@ -84,7 +84,7 @@ function DecisionCard({ decision }: { decision: Decision }) {
           <DecSection label={lang === 'ms' ? 'Rasional pemilihan' : 'Reason for selection'} value={decision.reason_for_selection} />
 
           <div className="decision-list-section">
-            <span className="dec-label">{lang === 'ms' ? 'Pilihan dipertimbangkan' : 'Options considered'}</span>
+            <span className="dec-label">{lang === 'ms' ? 'Pilihan dipertimbangkan' : 'What else we considered'}</span>
             <ul>{decision.options_considered.map((o, i) => <li key={i}>{o}</li>)}</ul>
           </div>
 
@@ -99,7 +99,7 @@ function DecisionCard({ decision }: { decision: Decision }) {
           </div>
 
           <div className="decision-list-section warning-list">
-            <span className="dec-label"><AlertTriangle size={13} /> {lang === 'ms' ? 'Kekangan & had diketahui' : 'Known limitations'}</span>
+            <span className="dec-label"><AlertTriangle size={13} /> {lang === 'ms' ? 'Kekangan & had diketahui' : 'What this does not tell us'}</span>
             <ul>{decision.known_limitations.map((l, i) => <li key={i}>{l}</li>)}</ul>
           </div>
 
@@ -115,7 +115,10 @@ function DecisionCard({ decision }: { decision: Decision }) {
             <span className="dec-label">{lang === 'ms' ? 'Status kelulusan' : 'Approval status'}</span>
             <div className="status-stepper">
               {(['draft', 'reviewed', 'approved'] as const).map((s, i) => {
-                const reached = ['draft', 'reviewed', 'approved'].indexOf(decision.approval_status) >= i
+                // indexOf returns -1 for 'rejected' and 'superseded', which lit no
+                // step at all while still drawing the full approval chain.
+                const position = ['draft', 'reviewed', 'approved'].indexOf(decision.approval_status)
+                const reached = position >= 0 ? position >= i : i === 0
                 return (
                   <div key={s} className={`stepper-step ${reached ? 'reached' : ''}`}>
                     <div className="stepper-dot" />
@@ -161,7 +164,7 @@ export function DecisionRegister({ decisions: initialDecisions }: { decisions: D
     <div className="decision-view">
       <div className="decision-hero">
         <div>
-          <p className="kicker">{lang === 'ms' ? 'JEJAK TADBIR URUS & DAFTAR KEPUTUSAN' : 'ASSURANCE & DECISION REGISTER'}</p>
+          <p className="kicker">{lang === 'ms' ? 'JEJAK TADBIR URUS & DAFTAR KEPUTUSAN' : 'DECISION RECORD'}</p>
           <h2>
             {lang === 'ms' ? 'Perkara yang disemak,' : 'What was reviewed,'}
             <br />
@@ -170,7 +173,7 @@ export function DecisionRegister({ decisions: initialDecisions }: { decisions: D
           <p>
             {lang === 'ms'
               ? 'Daftar keputusan demonstratif untuk prototaip pertandingan. Dalam pelaksanaan operasi sebenar, rekod ini disimpan secara berpusat, dikawal capaian, mempunyai kawalan versi dan jejak audit penuh.'
-              : 'A demonstrative decision register for the competition prototype. In operational deployment this would be persistent, permission-controlled, versioned, and auditable.'}
+              : 'A worked example of how decisions would be recorded. In a real deployment these would be saved permanently, access-controlled, version-tracked and fully auditable.'}
           </p>
           <div className="policy-disclaimer">
             <AlertTriangle size={14} />
@@ -259,7 +262,7 @@ export function DecisionRegister({ decisions: initialDecisions }: { decisions: D
         <span>
           {lang === 'ms'
             ? 'Untuk pelaksanaan operasi: keputusan mesti disimpan dalam sistem berterusan, dikawal kebenaran, dan berversi dengan jejak audit penuh. Prototaip ini menyimpan keputusan dalam memori sahaja.'
-            : 'For operational deployment: decisions must be stored in a persistent, permission-controlled, versioned system with a full audit trail. This prototype stores decisions in-memory only.'}
+            : 'For a real deployment, decisions would need to be stored permanently, access-controlled and version-tracked, with a full audit trail. This prototype keeps them only until you refresh the page.'}
         </span>
       </div>
     </div>

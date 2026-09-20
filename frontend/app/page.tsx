@@ -99,7 +99,7 @@ type DashboardData = {
     source: string
     stress_score: number
     scope_note?: string
-    latest: Record<string, { rolling_12m_mean: number; stress_score: number }>
+    latest: Record<string, { rolling_12m_mean: number; stress_score: number; latest_month?: string; baseline_mean?: number }>
   }
   sources: { dataset_id?: string; name: string; url: string; owner?: string; official_status?: string; licence?: string; publication_date?: string; extraction_date?: string; reference_period?: string; update_frequency?: string; geographic_coverage?: string; unit_of_measure?: string; definitions?: string; revision_status?: string; pipeline_version?: string; quality_checks?: string; known_gaps?: string; contact?: string }[]
   states: StateRecord[]
@@ -181,11 +181,21 @@ const colors = {
 function formatM(value: number) {
   return `${value.toFixed(1)}m`
 }
+// The extract stores this per 100 residents, which gives Putrajaya 2591.8 — a
+// true figure that reads like a mistake. Shown per resident instead.
+function visitsPerResident(per100: number) {
+  return (per100 / 100).toFixed(1)
+}
 function formatPct(value: number) {
   return `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`
 }
 function scoreColor(value: number) {
   return value >= 75 ? colors.rust : value >= 55 ? colors.ochre : colors.teal
+}
+// Same three tiers, but legible against the dark teal map banner, where the
+// light-surface palette above drops to roughly 2:1 contrast.
+function scoreColorOnDark(value: number) {
+  return value >= 75 ? '#ecc9ba' : value >= 55 ? '#f0dcb4' : '#bedfd8'
 }
 function quadrantClass(value: string) {
   return value.toLowerCase().replaceAll(' ', '-')
@@ -373,6 +383,7 @@ function StatCard({
   value,
   note,
   trend,
+  trendSuffix,
   icon,
   tone = 'teal',
 }: {
@@ -380,6 +391,7 @@ function StatCard({
   value: string
   note: string
   trend?: string
+  trendSuffix?: string
   icon: React.ReactNode
   tone?: 'teal' | 'emerald' | 'blue' | 'amber' | 'lime' | 'mint' | 'coral' | 'sky'
 }) {
@@ -412,7 +424,7 @@ function StatCard({
             {isNegative && <ArrowDownRight size={13} strokeWidth={2.4} aria-hidden="true" />}
             {isAlert && <span className="stat-badge-dot" aria-hidden="true" />}
             <span>{trend}</span>
-            {(isPositive || isNegative) && <span className="stat-badge-sub">YoY</span>}
+            {trendSuffix && (isPositive || isNegative) && <span className="stat-badge-sub">{trendSuffix}</span>}
           </div>
         )}
       </div>
@@ -432,7 +444,9 @@ function MalaysiaMap({
   const { lang, translateQuadrant, translateAction } = useLanguage()
   const [mapMode, setMapMode] = useState<'geo' | 'grid' | 'klang'>('geo')
   const [hovered, setHovered] = useState<string | null>(null)
-  const [isZoomed, setIsZoomed] = useState<boolean>(true)
+  // Opens on the whole country. Starting zoomed meant a panel titled "Pressure
+  // across Malaysia" showed a single 49 km2 territory and almost no map.
+  const [isZoomed, setIsZoomed] = useState<boolean>(false)
   const byName = useMemo(() => Object.fromEntries(states.map((state) => [state.state, state])), [states])
 
   const activeFocus = hovered ? byName[hovered] : byName[selected]
@@ -469,15 +483,33 @@ function MalaysiaMap({
     }
   }
 
+// The callout is a fixed 184x52 box hung off the selected state's centroid. On
+// a right-side state, and whenever the map is zoomed, the naive offset pushed
+// it past the SVG frame and the text was cut off. Flip and clamp instead.
+const CALLOUT_W = 184
+const CALLOUT_H = 52
+
+function calloutBox(centerX: number, svgWidth: number, preferRight: boolean) {
+  // centerX is the projected x of the marker; markers are drawn at the
+  // projection centre when zoomed, i.e. the middle of the frame.
+  const dx = preferRight ? 45 : -45
+  let boxX = dx > 0 ? dx : dx - CALLOUT_W
+  const absLeft = centerX + boxX
+  if (absLeft < 8) boxX = 8 - centerX
+  else if (absLeft + CALLOUT_W > svgWidth - 8) boxX = svgWidth - 8 - CALLOUT_W - centerX
+  return { dx, boxX }
+}
+
   const westCallout = useMemo(() => {
     if (!isWestSelected) return null
     const cfg = STATE_ZOOM_CONFIG[selected]
     const rec = byName[selected]
     if (!cfg || !rec) return null
     const isRightSide = cfg.center[0] > 101.9 && !['Kuala Lumpur', 'Putrajaya', 'Pulau Pinang'].includes(selected)
-    const dx = isZoomed ? 45 : isRightSide ? -45 : 45
+    // when zoomed the marker sits at the centre of the 470-wide frame
+    const centerX = isZoomed ? 235 : 235
+    const { dx, boxX } = calloutBox(centerX, 470, !isRightSide)
     const dy = -35
-    const boxX = dx > 0 ? dx : dx - 184
     const boxY = dy - 26
     return {
       coordinates: cfg.center,
@@ -495,9 +527,8 @@ function MalaysiaMap({
     const rec = byName[selected]
     if (!cfg || !rec) return null
     const isRightSide = selected === 'Sabah'
-    const dx = isZoomed ? 45 : isRightSide ? -45 : 45
+    const { dx, boxX } = calloutBox(250, 500, !isRightSide)
     const dy = -35
-    const boxX = dx > 0 ? dx : dx - 184
     const boxY = dy - 26
     return {
       coordinates: cfg.center,
@@ -514,39 +545,42 @@ function MalaysiaMap({
       <div className="map-caption">
         <div className="visual-heading">
           <span>
-            <MapIcon size={18} /> {lang === 'ms' ? 'Permukaan tekanan nasional' : 'National pressure surface'}
+            <MapIcon size={18} /> {lang === 'ms' ? 'Tekanan di seluruh Malaysia' : 'Pressure across Malaysia'}
           </span>
           <small>
             {lang === 'ms'
-              ? 'Keamatan permintaan, pertumbuhan pelawat dan isyarat IHP merentasi 16 negeri dan wilayah persekutuan Malaysia.'
-              : 'Demand intensity, visitor growth and CPI signals across all 16 Malaysian states and federal territories.'}
+              ? 'Setiap negeri diwarnakan mengikut skor tekanannya — sejauh mana permintaan pelawat menekan kapasiti tempatan.'
+              : 'Each state shaded by its pressure score — how hard visitor demand is pushing on local capacity.'}
           </small>
         </div>
         <div className="map-controls">
-          <div className="map-view-switcher" role="tablist" aria-label="Map view mode">
+          <div className="map-view-switcher" role="group" aria-label="Map view mode">
             <button
               type="button"
               className={mapMode === 'geo' ? 'active' : ''}
+              aria-pressed={mapMode === 'geo'}
               onClick={() => setMapMode('geo')}
-              title={lang === 'ms' ? 'Peta Dwi-Wilayah (Semenanjung & Malaysia Timur) dengan label wilayah jelas' : 'Dual-Region Map (West & East Malaysia) with clear territorial labels'}
+              title={lang === 'ms' ? 'Peta sebenar Semenanjung dan Malaysia Timur' : 'The real map of Peninsular and East Malaysia'}
             >
-              <MapIcon size={14} /> <span>{lang === 'ms' ? 'Peta Wilayah' : 'Regional Map'}</span>
+              <MapIcon size={14} /> <span>{lang === 'ms' ? 'Peta' : 'Map'}</span>
             </button>
             <button
               type="button"
               className={mapMode === 'grid' ? 'active' : ''}
+              aria-pressed={mapMode === 'grid'}
               onClick={() => setMapMode('grid')}
-              title={lang === 'ms' ? 'Grid jubin kartogram sama luas bagi semua 16 wilayah' : 'Equal-area cartogram tile grid for all 16 territories'}
+              title={lang === 'ms' ? 'Setiap negeri mendapat petak bersaiz sama, supaya tempat kecil seperti Putrajaya tidak hilang' : 'Every state gets the same size tile, so small places like Putrajaya are not lost'}
             >
-              <LayoutGrid size={14} /> <span>{lang === 'ms' ? 'Grid Sama Luas' : 'Equal-Area Grid'}</span>
+              <LayoutGrid size={14} /> <span>{lang === 'ms' ? 'Grid (semua sama saiz)' : 'Grid (all states equal size)'}</span>
             </button>
             <button
               type="button"
               className={mapMode === 'klang' ? 'active' : ''}
+              aria-pressed={mapMode === 'klang'}
               onClick={() => setMapMode('klang')}
-              title={lang === 'ms' ? 'Fokus tekanan tinggi Lembah Klang & Wilayah Persekutuan' : 'Klang Valley & FTs high-pressure focus'}
+              title={lang === 'ms' ? 'Tumpuan pada Kuala Lumpur, Putrajaya, Selangor dan Labuan — kawasan bertekanan paling tinggi' : 'Close-up on Kuala Lumpur, Putrajaya, Selangor and Labuan — the highest-pressure area'}
             >
-              <Target size={14} /> <span>{lang === 'ms' ? 'Episentrum WP' : 'FT Epicenter'}</span>
+              <Target size={14} /> <span>{lang === 'ms' ? 'Lembah Klang' : 'Klang Valley'}</span>
             </button>
           </div>
           <span className="map-legend">
@@ -561,7 +595,7 @@ function MalaysiaMap({
         <div className="dual-region-map-shell">
           <div className="dual-map-banner">
             <div className="banner-title-area">
-              <span className="banner-sub">{lang === 'ms' ? 'ATLAS RISIKO & KEMAKMURAN PELANCONGAN' : 'TOURISM RISK & PROSPERITY ATLAS'}</span>
+              <span className="banner-sub">{lang === 'ms' ? 'PETA TEKANAN PELANCONGAN' : 'TOURISM PRESSURE MAP'}</span>
               <h2>MALAYSIA</h2>
             </div>
             <div className="banner-stats">
@@ -570,7 +604,7 @@ function MalaysiaMap({
                   <span className="focus-flag">MY</span>
                   <strong>{activeFocus.state}</strong>
                   <span className="dot">•</span>
-                  <span style={{ color: scoreColor(activeFocus.pressure_score), fontWeight: 700 }}>
+                  <span style={{ color: scoreColorOnDark(activeFocus.pressure_score), fontWeight: 700 }}>
                     {activeFocus.pressure_score}/100 {lang === 'ms' ? 'Tekanan' : 'Pressure'}
                   </span>
                   <span className="dot">•</span>
@@ -867,8 +901,8 @@ function MalaysiaMap({
                         />
                         <g transform={`translate(${westCallout.boxX}, ${westCallout.boxY})`}>
                           <rect
-                            width={184}
-                            height={52}
+                            width={CALLOUT_W}
+                            height={CALLOUT_H}
                             rx={8}
                             fill="rgba(251, 250, 246, 0.97)"
                             stroke={colors.ochreLight}
@@ -1080,8 +1114,8 @@ function MalaysiaMap({
                         />
                         <g transform={`translate(${eastCallout.boxX}, ${eastCallout.boxY})`}>
                           <rect
-                            width={184}
-                            height={52}
+                            width={CALLOUT_W}
+                            height={CALLOUT_H}
                             rx={8}
                             fill="rgba(251, 250, 246, 0.97)"
                             stroke={colors.ochreLight}
@@ -1121,8 +1155,8 @@ function MalaysiaMap({
               <strong>{lang === 'ms' ? 'Grid Kartogram Sama Luas (16 Wilayah)' : 'Equal-Area Cartogram Grid (16 Territories)'}</strong>
               <p>
                 {lang === 'ms'
-                  ? 'Setiap negeri dan wilayah persekutuan mempunyai keutamaan visual yang seimbang, memastikan episentrum bandar padat seperti Putrajaya dan Kuala Lumpur tidak terlindung secara geografi.'
-                  : 'Every state and federal territory has equal visual prominence, ensuring compact urban epicenters like Putrajaya and Kuala Lumpur are not geographically eclipsed.'}
+                  ? 'Setiap negeri mendapat petak bersaiz sama. Pada peta sebenar, tempat kecil seperti Putrajaya dan Kuala Lumpur hampir hilang — di sini ia mendapat ruang yang sama.'
+                  : 'Every state gets the same size tile. On a real map, small places like Putrajaya and Kuala Lumpur almost disappear — here they get equal space.'}
               </p>
             </div>
           </div>
@@ -1136,6 +1170,7 @@ function MalaysiaMap({
                   key={st.state}
                   className={`cartogram-card ${isSel ? 'selected' : ''}`}
                   onClick={() => onSelect(st.state)}
+                  aria-pressed={isSel}
                 >
                   <div className="cartogram-top">
                     <span className="cartogram-code">{meta?.code || st.state.slice(0, 3).toUpperCase()}</span>
@@ -1173,8 +1208,8 @@ function MalaysiaMap({
               <strong>{lang === 'ms' ? 'Wilayah Persekutuan & Hab Permintaan Lembah Klang' : 'Federal Territories & Klang Valley Demand Hub'}</strong>
               <p>
                 {lang === 'ms'
-                  ? 'Putrajaya dan Kuala Lumpur mencatatkan indeks tekanan pelancongan tertinggi di Malaysia. Teliti daya tampung, nisbah pelawat, dan isyarat inflasi secara bersebelahan.'
-                  : 'Putrajaya and Kuala Lumpur represent Malaysia\'s highest tourism pressure index. Inspect their carrying capacity, visitor ratios, and inflation signals side-by-side.'}
+                  ? 'Putrajaya dan Kuala Lumpur mengalami tekanan paling tinggi di negara ini. Bandingkan kesesakan, jumlah pelawat dan kenaikan harga tempatan mereka secara bersebelahan.'
+                  : 'Putrajaya and Kuala Lumpur are under the most pressure in the country. Compare their crowding, visitor numbers and local price rises side by side.'}
               </p>
             </div>
           </div>
@@ -1185,10 +1220,12 @@ function MalaysiaMap({
               const isSel = selected === stName
               const meta = STATE_META[stName]
               return (
-                <div
+                <button
+                  type="button"
                   key={stName}
                   className={`ft-card ${isSel ? 'selected' : ''}`}
                   onClick={() => onSelect(stName)}
+                  aria-pressed={isSel}
                 >
                   <div className="ft-card-top">
                     <div>
@@ -1204,44 +1241,37 @@ function MalaysiaMap({
 
                   <div className="ft-stats-list">
                     <div className="ft-stat-row">
-                      <span>{lang === 'ms' ? 'Pelawat / 100 penduduk' : 'Visitors / 100 residents'}</span>
-                      <strong>{st.visitors_per_100_residents.toFixed(1)}</strong>
+                      <span>{lang === 'ms' ? 'Lawatan setiap penduduk setahun' : 'Visits per resident each year'}</span>
+                      <strong>{visitsPerResident(st.visitors_per_100_residents)}</strong>
                     </div>
                     <div className="ft-stat-row">
-                      <span>{lang === 'ms' ? 'Jumlah Pelawat 2025' : '2025 Total Visitors'}</span>
+                      <span>{lang === 'ms' ? 'Jumlah lawatan 2025' : 'Total visits 2025'}</span>
                       <strong>{st.visitors_2025_million.toFixed(2)}{lang === 'ms' ? 'j' : 'm'}</strong>
                     </div>
                     <div className="ft-stat-row">
-                      <span>{lang === 'ms' ? 'Pertumbuhan Pelawat YoY' : 'Visitor Growth YoY'}</span>
+                      <span>{lang === 'ms' ? 'Pertumbuhan pelawat berbanding tahun lalu' : 'Visitor growth vs last year'}</span>
                       <strong className="green">{formatPct(st.visitor_growth_yoy)}</strong>
                     </div>
                     <div className="ft-stat-row">
-                      <span>{lang === 'ms' ? 'IHP Negeri YoY' : 'State CPI YoY'}</span>
+                      <span>{lang === 'ms' ? 'Harga tempatan berbanding tahun lalu' : 'Local prices vs a year ago'}</span>
                       <strong>+{st.cpi_yoy.toFixed(2)}%</strong>
                     </div>
                     <div className="ft-stat-row">
-                      <span>{lang === 'ms' ? 'Komposisi Pelancong Bermalam' : 'Tourist Overnight Mix'}</span>
+                      <span>{lang === 'ms' ? 'Bahagian yang bermalam' : 'Share who stay overnight'}</span>
                       <strong>{st.tourist_mix_pct.toFixed(1)}%</strong>
                     </div>
                   </div>
 
                   <div className="ft-action-box">
-                    <span className="eyebrow">{lang === 'ms' ? 'Arah tindakan dasar' : 'Action direction'}</span>
+                    <span className="eyebrow">{lang === 'ms' ? 'Apa yang kami cadangkan' : 'What we recommend'}</span>
                     <strong>{translateAction(st.action)}</strong>
                     <p>{st.action_detail}</p>
                   </div>
 
-                  <button
-                    type="button"
-                    className={`outline-button full ${isSel ? 'active-btn' : ''}`}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onSelect(stName)
-                    }}
-                  >
+                  <span className={`outline-button full ${isSel ? 'active-btn' : ''}`} aria-hidden="true">
                     {isSel ? (lang === 'ms' ? 'Aktif pada Papan Pemuka' : 'Active on Dashboard') : (lang === 'ms' ? `Pilih ${stName}` : `Select ${stName}`)}
-                  </button>
-                </div>
+                  </span>
+                </button>
               )
             })}
           </div>
@@ -1250,48 +1280,51 @@ function MalaysiaMap({
 
       <div className="map-footnote">
         {lang === 'ms'
-          ? 'Pilih mana-mana negeri atau wilayah untuk meneliti rantai buktinya. Skor merupakan indeks saringan telus, bukan had daya tampung mutlak.'
-          : 'Select any state or territory to focus its evidence chain. Scores are transparent screening indices, not official carrying-capacity limits.'}
+          ? 'Klik sebuah negeri untuk memuatkan butirannya pada panel di bawah. Skor ini membandingkan negeri antara satu sama lain — ia bukan had rasmi bilangan pelawat yang boleh ditampung sesebuah tempat.'
+          : 'Click a state to load its details in the panels below. These scores compare states against each other — they are not official limits on how many visitors a place can take.'}
       </div>
     </div>
   )
 }
 
+// A single 0-100 value on a fixed scale does not need Vega, and routing it
+// through one was the bug: the embed rendered ~26px tall inside an 8px
+// overflow-hidden track, so the bar was clipped to a sliver at every width.
+// Plain divs also let us mark the same 55/75 band boundaries the map legend
+// uses, so the number has a scale to sit against.
 function ScoreBar({ label, value, tone = 'lime' }: { label: string; value: number; tone?: 'lime' | 'coral' }) {
-  const spec = {
-    $schema: 'https://vega.github.io/schema/vega-lite/v5.json',
-    width: 'container',
-    height: 16,
-    data: { values: [{ metric: 'score', value, target: 100 }] },
-    layer: [
-      {
-        mark: { type: 'rule', color: '#eaece8', strokeWidth: 10 },
-        encoding: {
-          x: { field: 'target', type: 'quantitative', scale: { domain: [0, 100] }, axis: null },
-          y: { field: 'metric', type: 'nominal', axis: null },
-        },
-      },
-      {
-        mark: { type: 'bar', cornerRadiusEnd: 8, color: tone === 'coral' ? colors.rust : colors.teal },
-        encoding: {
-          x: { field: 'value', type: 'quantitative', scale: { domain: [0, 100] }, axis: null },
-          y: { field: 'metric', type: 'nominal', axis: null },
-        },
-      },
-    ],
-    config: { background: 'transparent', view: { stroke: null } },
-  }
+  const width = Math.max(0, Math.min(100, value))
   return (
     <div className="score-row">
       <div>
         <span>{label}</span>
         <strong>{value}</strong>
       </div>
-      <div className="score-track">
-        <VegaEmbed spec={spec as any} options={{ actions: false, renderer: 'svg' }} />
+      <div
+        className="score-track"
+        role="img"
+        aria-label={`${label}: ${value} out of 100`}
+      >
+        <span className="score-band-tick" style={{ left: '55%' }} aria-hidden="true" />
+        <span className="score-band-tick" style={{ left: '75%' }} aria-hidden="true" />
+        <span
+          className="score-track-fill"
+          style={{ width: `${width}%`, background: tone === 'coral' ? colors.rust : colors.teal }}
+        />
       </div>
     </div>
   )
+}
+
+// Vega marks are canvas/SVG items, not DOM nodes, so a click handler has to be
+// attached to the view once it exists. VegaEmbed hands us the view via onEmbed.
+function pickStateOnClick(onSelect: (state: string) => void) {
+  return (result: { view: { addEventListener: (t: string, h: (e: unknown, i: any) => void) => void } }) => {
+    result.view.addEventListener('click', (_event, item) => {
+      const state = item?.datum?.state
+      if (typeof state === 'string') onSelect(state)
+    })
+  }
 }
 
 const VEGA_THEME = {
@@ -1317,22 +1350,50 @@ const VEGA_THEME = {
   view: { stroke: null },
 }
 
+// '2025-Q2' -> 'Q2 2025'. One quarter format is used everywhere a quarter is
+// named: this axis, the KPI cards and the Method tab's data-snapshot line.
+function formatQuarterLabel(period: string) {
+  const match = /^(\d{4})-Q([1-4])$/.exec(period)
+  return match ? `Q${match[2]} ${match[1]}` : period
+}
+
 function ForecastVega({ data }: { data: DashboardData }) {
   const { lang } = useLanguage()
-  const actualLabel = lang === 'ms' ? 'Sebenar (DOSM)' : 'Actual (DOSM)'
-  const forecastLabel = lang === 'ms' ? 'Unjuran AI' : 'AI Forecast'
-  const actual = (data.quarterly_history ?? [])
-    .slice(-4)
-    .map((row) => ({ period: row.period, value: row.visitors_million, series: actualLabel }))
+  const actualLabel = lang === 'ms' ? 'Direkod oleh DOSM' : 'Recorded by DOSM'
+  const forecastLabel = lang === 'ms' ? 'Unjuran' : 'Forecast'
+  const history = (data.quarterly_history ?? []).slice(-4)
+  const actual = history.map((row) => ({
+    period: formatQuarterLabel(row.period),
+    value: row.visitors_million,
+    lower: null as number | null,
+    upper: null as number | null,
+    series: actualLabel,
+  }))
+  // Repeat the last recorded quarter as the forecast series' first point, with
+  // a zero-width interval. Without it the two lines never meet and the 95%
+  // band opens as a vertical wall at the first forecast quarter.
+  const lastActual = history[history.length - 1]
+  const bridge = lastActual
+    ? [
+        {
+          period: formatQuarterLabel(lastActual.period),
+          value: lastActual.visitors_million,
+          lower: lastActual.visitors_million,
+          upper: lastActual.visitors_million,
+          series: forecastLabel,
+        },
+      ]
+    : []
   const predicted = (data.forecast?.horizon ?? []).map((row) => ({
-    period: row.period,
+    period: formatQuarterLabel(row.period),
     value: row.forecast_million,
     lower: row.lower_million,
     upper: row.upper_million,
     series: forecastLabel,
   }))
-  const values = [...actual, ...predicted]
-  const order = values.map((item) => item.period)
+  const values = [...actual, ...bridge, ...predicted]
+  const order = [...actual, ...predicted].map((item) => item.period)
+  const handoverPeriod = lastActual ? formatQuarterLabel(lastActual.period) : null
   const spec = {
     $schema: 'https://vega.github.io/schema/vega-lite/v5.json',
     width: 'container',
@@ -1351,7 +1412,7 @@ function ForecastVega({ data }: { data: DashboardData }) {
             sort: order,
             axis: { title: null, labelAngle: -25, labelFontSize: 12 },
           },
-          y: { field: 'lower', type: 'quantitative', scale: { zero: false }, axis: { title: lang === 'ms' ? 'Juta pelawat' : 'Million visitors', titleFontSize: 13, labelFontSize: 12 } },
+          y: { field: 'lower', type: 'quantitative', scale: { zero: false }, axis: { title: lang === 'ms' ? 'Juta lawatan' : 'Million visits', titleFontSize: 13, labelFontSize: 12 } },
           y2: { field: 'upper' },
         },
       },
@@ -1368,11 +1429,27 @@ function ForecastVega({ data }: { data: DashboardData }) {
           },
           tooltip: [
             { field: 'period', title: lang === 'ms' ? 'Suku' : 'Quarter' },
-            { field: 'series', title: lang === 'ms' ? 'Status' : 'Track' },
-            { field: 'value', title: lang === 'ms' ? 'Jangkaan (juta)' : 'Expected (million)', format: '.2f' },
-            { field: 'lower', title: lang === 'ms' ? 'Batas Konservatif (j)' : 'Conservative Bound (m)', format: '.2f' },
-            { field: 'upper', title: lang === 'ms' ? 'Batas Puncak (j)' : 'Peak Surge Bound (m)', format: '.2f' },
+            { field: 'series', title: lang === 'ms' ? 'Direkod atau unjuran' : 'Recorded or forecast' },
+            { field: 'value', title: lang === 'ms' ? 'Anggaran terbaik (juta lawatan)' : 'Best estimate (m visits)', format: '.2f' },
+            { field: 'lower', title: lang === 'ms' ? 'Hujung bawah julat berkemungkinan' : 'Low end of likely range', format: '.2f' },
+            { field: 'upper', title: lang === 'ms' ? 'Hujung atas julat berkemungkinan' : 'High end of likely range', format: '.2f' },
           ],
+        },
+      },
+      // Marks where recorded data stops and the forecast begins, so the reader
+      // can see at a glance which half of the line is history.
+      {
+        data: { values: handoverPeriod ? [{ period: handoverPeriod }] : [] },
+        mark: { type: 'rule', color: colors.slate, strokeDash: [3, 3], strokeWidth: 1.2, opacity: 0.8 },
+        encoding: { x: { field: 'period', type: 'ordinal', sort: order } },
+      },
+      {
+        data: { values: handoverPeriod ? [{ period: handoverPeriod }] : [] },
+        mark: { type: 'text', align: 'left', dx: 6, fontSize: 11, fontWeight: 600, color: colors.muted },
+        encoding: {
+          x: { field: 'period', type: 'ordinal', sort: order },
+          y: { value: 8 },
+          text: { value: lang === 'ms' ? 'Unjuran →' : 'Forecast →' },
         },
       },
     ],
@@ -1381,11 +1458,20 @@ function ForecastVega({ data }: { data: DashboardData }) {
   return <VegaEmbed spec={spec as any} options={{ actions: false, renderer: 'svg' }} />
 }
 
-function MatrixVega({ states }: { states: StateRecord[] }) {
+function MatrixVega({
+  states,
+  selected,
+  onSelect,
+}: {
+  states: StateRecord[]
+  selected: string
+  onSelect: (state: string) => void
+}) {
   const { lang, translateQuadrant } = useLanguage()
   const localizedStates = states.map((st) => ({
     ...st,
     quadrant_display: translateQuadrant(st.quadrant),
+    isSelected: st.state === selected,
   }))
   const spec = {
     $schema: 'https://vega.github.io/schema/vega-lite/v5.json',
@@ -1393,22 +1479,34 @@ function MatrixVega({ states }: { states: StateRecord[] }) {
     height: 350,
     autosize: { type: 'fit-x', contains: 'padding' },
     data: { values: localizedStates },
-    params: [{ name: 'stateSelect', select: { type: 'point', fields: ['state'] } }],
-    mark: { type: 'circle', opacity: 0.88, stroke: '#ffffff', strokeWidth: 1.6 },
+    mark: { type: 'circle', cursor: 'pointer' },
     encoding: {
+      opacity: { condition: { test: 'datum.isSelected', value: 1 }, value: 0.55 },
+      stroke: { condition: { test: 'datum.isSelected', value: colors.ink }, value: '#ffffff' },
+      strokeWidth: { condition: { test: 'datum.isSelected', value: 2.8 }, value: 1.4 },
       x: {
         field: 'pressure_score',
         type: 'quantitative',
         scale: { domain: [0, 100] },
-        axis: { title: lang === 'ms' ? 'Risiko tekanan →' : 'Pressure risk →', titleFontSize: 15, labelFontSize: 14 },
+        axis: { title: lang === 'ms' ? 'Tekanan pada kapasiti tempatan →' : 'Pressure on local capacity →', titleFontSize: 15, labelFontSize: 14, tickCount: 5 },
       },
       y: {
         field: 'prosperity_score',
         type: 'quantitative',
         scale: { domain: [0, 100] },
-        axis: { title: lang === 'ms' ? 'Potensi kemakmuran' : 'Prosperity potential', titleFontSize: 15, labelFontSize: 14 },
+        axis: { title: lang === 'ms' ? '↑ Manfaat ekonomi daripada pelancongan' : '↑ Economic value from tourism', titleFontSize: 15, labelFontSize: 14, tickCount: 5 },
       },
-      size: { field: 'visitors_2025_million', type: 'quantitative', scale: { range: [110, 1000] }, legend: null },
+      size: {
+        field: 'visitors_2025_million',
+        type: 'quantitative',
+        scale: { range: [110, 1000] },
+        legend: {
+          title: lang === 'ms' ? 'Lawatan setahun (juta)' : 'Visits per year (m)',
+          orient: 'top',
+          labelFontSize: 12,
+          titleFontSize: 12,
+        },
+      },
       color: {
         field: 'quadrant_display',
         type: 'nominal',
@@ -1421,19 +1519,25 @@ function MatrixVega({ states }: { states: StateRecord[] }) {
           ],
           range: [colors.rust, colors.teal, colors.slate, colors.ochre],
         },
-        legend: { title: lang === 'ms' ? 'Postur dasar' : 'Policy posture', orient: 'top', labelFontSize: 14, titleFontSize: 15 },
+        legend: { title: lang === 'ms' ? 'Apa yang kami cadangkan' : 'What we recommend', orient: 'top', labelFontSize: 13, titleFontSize: 13 },
       },
       tooltip: [
         { field: 'state', title: lang === 'ms' ? 'Negeri' : 'State' },
-        { field: 'quadrant_display', title: lang === 'ms' ? 'Postur dicadangkan' : 'Recommended posture' },
+        { field: 'quadrant_display', title: lang === 'ms' ? 'Cadangan' : 'We recommend' },
         { field: 'pressure_score', title: lang === 'ms' ? 'Tekanan' : 'Pressure', format: '.0f' },
-        { field: 'prosperity_score', title: lang === 'ms' ? 'Kemakmuran' : 'Prosperity', format: '.0f' },
-        { field: 'visitors_2025_million', title: lang === 'ms' ? 'Pelawat (j)' : 'Visitors (m)', format: '.2f' },
+        { field: 'prosperity_score', title: lang === 'ms' ? 'Manfaat tempatan' : 'Local benefit', format: '.0f' },
+        { field: 'visitors_2025_million', title: lang === 'ms' ? 'Lawatan (juta)' : 'Visits (m)', format: '.2f' },
       ],
     },
     config: VEGA_THEME,
   }
-  return <VegaEmbed spec={spec as any} options={{ actions: false, renderer: 'svg' }} />
+  return (
+    <VegaEmbed
+      spec={spec as any}
+      options={{ actions: false, renderer: 'svg' }}
+      onEmbed={pickStateOnClick(onSelect)}
+    />
+  )
 }
 
 function PortfolioVega({ states }: { states: StateRecord[] }) {
@@ -1451,7 +1555,7 @@ function PortfolioVega({ states }: { states: StateRecord[] }) {
     'Build readiness': {
       action: {
         ms: 'Tingkatkan kapasiti transit & utiliti sebelum pengembangan pelancong',
-        en: 'Upgrade transit & utility capacity before expanding visitor volume',
+        en: 'Improve transport and utilities before inviting more visitors',
       },
       color: '#1f6b5e',
       bgColor: '#edf7f4',
@@ -1460,7 +1564,7 @@ function PortfolioVega({ states }: { states: StateRecord[] }) {
     'Manage growth': {
       action: {
         ms: 'Hadkan kesesakan puncak & sebar aliran ke koridor sekitar',
-        en: 'Cap peak congestion & disperse visitor flows to surrounding corridors',
+        en: 'Ease peak-time crowding and spread visitors to nearby areas',
       },
       color: '#96432a',
       bgColor: '#fdf2ef',
@@ -1469,7 +1573,7 @@ function PortfolioVega({ states }: { states: StateRecord[] }) {
     'Grow selectively': {
       action: {
         ms: 'Kapasiti tinggi — pasarkan secara aktif & tarik pelaburan hasil tinggi',
-        en: 'High headroom — actively promote & attract high-yield spenders',
+        en: 'Plenty of room — promote it, and aim for visitors who stay longer and spend more',
       },
       color: '#0d9488',
       bgColor: '#f0fdfa',
@@ -1478,7 +1582,7 @@ function PortfolioVega({ states }: { states: StateRecord[] }) {
     'Protect value': {
       action: {
         ms: 'Aset warisan & ekologi rapuh — utamakan pemuliharaan berbanding jumlah massa',
-        en: 'Fragile heritage & eco assets — prioritize conservation over mass footfall',
+        en: 'Fragile heritage and nature — protect it rather than chase visitor numbers',
       },
       color: '#b9821f',
       bgColor: '#fefce8',
@@ -1574,8 +1678,8 @@ function FlowVega() {
     {
       key: 'demand',
       icon: '📈',
-      name: { ms: 'Keamatan permintaan', en: 'Demand intensity' },
-      desc: { ms: 'Isipadu & ketumpatan pelancong', en: 'Visitor volume & density' },
+      name: { ms: 'Keamatan permintaan', en: 'How busy it is' },
+      desc: { ms: 'Isipadu & ketumpatan pelancong', en: 'Visitor numbers against population' },
       scores: {
         'Build readiness': 0.32,
         'Manage growth': 0.86,
@@ -1586,8 +1690,8 @@ function FlowVega() {
     {
       key: 'growth',
       icon: '🚀',
-      name: { ms: 'Momentum pertumbuhan', en: 'Growth momentum' },
-      desc: { ms: 'Pertumbuhan perbelanjaan YoY', en: 'YoY expenditure growth' },
+      name: { ms: 'Momentum pertumbuhan', en: 'How fast it is growing' },
+      desc: { ms: 'Pertumbuhan perbelanjaan YoY', en: 'Tourism spending vs a year earlier' },
       scores: {
         'Build readiness': 0.45,
         'Manage growth': 0.7,
@@ -1598,8 +1702,8 @@ function FlowVega() {
     {
       key: 'cpi',
       icon: '🌿',
-      name: { ms: 'IHP & Alam sekitar', en: 'CPI & Environment' },
-      desc: { ms: 'Tekanan kos hidup & kualiti udara', en: 'Cost of living & air stress' },
+      name: { ms: 'IHP & Alam sekitar', en: 'Local prices and air quality' },
+      desc: { ms: 'Tekanan kos hidup & kualiti udara', en: 'Cost of living for residents, plus air pollution' },
       scores: {
         'Build readiness': 0.65,
         'Manage growth': 0.5,
@@ -1628,26 +1732,27 @@ function FlowVega() {
   return (
     <div className="matrix-container">
       <div className="matrix-legend">
-        <span>{lang === 'ms' ? 'Pengaruh Isyarat:' : 'Signal Sensitivity:'}</span>
+        <span>{lang === 'ms' ? 'Sejauh mana data ini penting:' : 'How much this data matters:'}</span>
         <span className="matrix-legend-item">
           <span className="matrix-legend-swatch" style={{ background: '#e5f4f0' }} />
-          {lang === 'ms' ? '<40% Rendah' : '<40% Low'}
+          {lang === 'ms' ? 'Bawah 40% — kecil' : 'Under 40% — minor'}
         </span>
         <span className="matrix-legend-item">
           <span className="matrix-legend-swatch" style={{ background: '#5eb3a4' }} />
-          {lang === 'ms' ? '40–69% Sederhana' : '40–69% Moderate'}
+          {lang === 'ms' ? '40–69% — menyumbang' : '40–69% — contributes'}
         </span>
         <span className="matrix-legend-item">
           <span className="matrix-legend-swatch" style={{ background: '#0f4f45' }} />
-          <strong>{lang === 'ms' ? '≥70% Pemacu Utama' : '≥70% Primary Trigger'}</strong>
+          <strong>{lang === 'ms' ? '70%+ — faktor penentu' : '70%+ — the deciding factor'}</strong>
         </span>
       </div>
 
+      <div className="matrix-table-scroll">
       <table className="matrix-table">
         <thead>
           <tr>
             <th className="matrix-th-corner">
-              {lang === 'ms' ? 'Isyarat Bukti' : 'Evidence Signal'}
+              {lang === 'ms' ? 'Apa yang kami lihat' : 'What we looked at'}
             </th>
             {postures.map((p) => (
               <th
@@ -1688,7 +1793,7 @@ function FlowVega() {
                     <div>{Math.round(score * 100)}%</div>
                     {shade.isPrimary && (
                       <span className="matrix-primary-tag">
-                        {lang === 'ms' ? '★ Utama' : '★ Primary'}
+                        {lang === 'ms' ? '★ Penentu' : '★ Deciding'}
                       </span>
                     )}
                   </td>
@@ -1698,6 +1803,7 @@ function FlowVega() {
           ))}
         </tbody>
       </table>
+      </div>
 
       <div className="matrix-takeaway-box">
         {lang === 'ms' ? (
@@ -1706,7 +1812,7 @@ function FlowVega() {
           </>
         ) : (
           <>
-            <strong>💡 Plain English:</strong> Tourist volume surges (<strong>86%</strong>) mandate growth controls, while environmental &amp; price stress (<strong>76%</strong>) triggers value protection.
+            <strong>💡 In short:</strong> when visitor numbers spike, the answer is usually to manage growth (<strong>86%</strong>). When local prices and air quality are under strain, the answer is usually to protect what makes the place worth visiting (<strong>76%</strong>).
           </>
         )}
       </div>
@@ -1714,7 +1820,15 @@ function FlowVega() {
   )
 }
 
-function TopStatesVega({ states }: { states: StateRecord[] }) {
+function TopStatesVega({
+  states,
+  selected,
+  onSelect,
+}: {
+  states: StateRecord[]
+  selected: string
+  onSelect: (state: string) => void
+}) {
   const { lang } = useLanguage()
   const values = [...states]
     .sort((a, b) => b.pressure_score - a.pressure_score)
@@ -1724,6 +1838,7 @@ function TopStatesVega({ states }: { states: StateRecord[] }) {
       pressure: state.pressure_score,
       prosperity: state.prosperity_score,
       rank: index + 1,
+      isSelected: state.state === selected,
     }))
   const spec = {
     $schema: 'https://vega.github.io/schema/vega-lite/v5.json',
@@ -1740,13 +1855,13 @@ function TopStatesVega({ states }: { states: StateRecord[] }) {
             field: 'pressure',
             type: 'quantitative',
             scale: { domain: [0, 100] },
-            axis: { title: lang === 'ms' ? 'Indeks risiko tekanan' : 'Pressure risk index', tickCount: 5, labelFontSize: 13, titleFontSize: 14 },
+            axis: { title: lang === 'ms' ? 'Skor tekanan (0–100)' : 'Pressure score (0–100)', tickCount: 5, labelFontSize: 13, titleFontSize: 14 },
           },
           x2: { value: 0 },
         },
       },
       {
-        mark: { type: 'point', filled: true, size: 210, stroke: '#ffffff', strokeWidth: 1.8 },
+        mark: { type: 'point', filled: true, size: 210, cursor: 'pointer' },
         encoding: {
           y: { field: 'state', type: 'nominal', sort: '-x' },
           x: { field: 'pressure', type: 'quantitative', scale: { domain: [0, 100] } },
@@ -1756,39 +1871,68 @@ function TopStatesVega({ states }: { states: StateRecord[] }) {
             scale: { domain: [0, 50, 100], range: [colors.teal, colors.ochre, colors.rust] },
             legend: null,
           },
+          stroke: { condition: { test: 'datum.isSelected', value: colors.ink }, value: '#ffffff' },
+          strokeWidth: { condition: { test: 'datum.isSelected', value: 3 }, value: 1.8 },
+          size: { condition: { test: 'datum.isSelected', value: 320 }, value: 210 },
           tooltip: [
             { field: 'state', title: lang === 'ms' ? 'Negeri' : 'State' },
-            { field: 'pressure', title: lang === 'ms' ? 'Skor tekanan' : 'Pressure score' },
-            { field: 'prosperity', title: lang === 'ms' ? 'Skor kemakmuran' : 'Prosperity score' },
+            { field: 'pressure', title: lang === 'ms' ? 'Tekanan' : 'Pressure' },
+            { field: 'prosperity', title: lang === 'ms' ? 'Manfaat tempatan' : 'Local benefit' },
           ],
         },
       },
       {
-        mark: { type: 'text', align: 'left', dx: 11, color: colors.inkSoft, fontSize: 13, fontWeight: 700 },
+        mark: { type: 'text', align: 'left', dx: 11, fontSize: 13, fontWeight: 700 },
         encoding: {
           y: { field: 'state', type: 'nominal', sort: '-x' },
           x: { field: 'pressure', type: 'quantitative' },
           text: { field: 'pressure', type: 'quantitative', format: '.0f' },
+          color: { condition: { test: 'datum.isSelected', value: colors.ink }, value: colors.muted },
         },
       },
     ],
     config: VEGA_THEME,
   }
-  return <VegaEmbed spec={spec as any} options={{ actions: false, renderer: 'svg' }} />
+  return (
+    <VegaEmbed
+      spec={spec as any}
+      options={{ actions: false, renderer: 'svg' }}
+      onEmbed={pickStateOnClick(onSelect)}
+    />
+  )
+}
+
+// One watch level for the whole panel. The colour split, the reference line and
+// the axis title all read from this, so they cannot disagree again.
+const AIR_WATCH_LEVEL = 50
+
+// Keep the formula (it is the term) and add a two-word plain gloss. Subscripts
+// match the summary paragraph below the chart.
+const POLLUTANT_LABELS: Record<string, { en: string; ms: string }> = {
+  CO: { en: 'CO — carbon monoxide', ms: 'CO — karbon monoksida' },
+  NO2: { en: 'NO₂ — traffic fumes', ms: 'NO₂ — asap kenderaan' },
+  O3: { en: 'O₃ — ground ozone', ms: 'O₃ — ozon permukaan' },
+  'PM 10': { en: 'PM10 — coarse dust', ms: 'PM10 — habuk kasar' },
+  'PM 2.5': { en: 'PM2.5 — fine dust', ms: 'PM2.5 — habuk halus' },
+  SO2: { en: 'SO₂ — industrial fumes', ms: 'SO₂ — asap industri' },
+}
+
+function pollutantLabel(key: string, lang: 'en' | 'ms') {
+  return POLLUTANT_LABELS[key]?.[lang] ?? key
 }
 
 function EnvironmentVega({ environment }: { environment?: DashboardData['environment'] }) {
   const { lang } = useLanguage()
-  const safeLabel = lang === 'ms' ? 'Selamat (≤40)' : 'Safe (≤40)'
-  const watchLabel = lang === 'ms' ? 'Perhatian (>40)' : 'Watch (>40)'
+  const safeLabel = lang === 'ms' ? `Bawah aras perhatian (${AIR_WATCH_LEVEL})` : `Under watch level (${AIR_WATCH_LEVEL})`
+  const watchLabel = lang === 'ms' ? `Pada atau atas aras perhatian (${AIR_WATCH_LEVEL})` : `At or above watch level (${AIR_WATCH_LEVEL})`
 
   const values = environment
     ? Object.entries(environment.latest)
         .map(([pollutant, item]) => {
           const score = Math.round(item.stress_score)
-          const isSafe = score <= 40
+          const isSafe = score < AIR_WATCH_LEVEL
           return {
-            pollutant,
+            pollutant: pollutantLabel(pollutant, lang),
             value: score,
             category: isSafe ? safeLabel : watchLabel,
             label: `${score}`,
@@ -1826,7 +1970,10 @@ function EnvironmentVega({ environment }: { environment?: DashboardData['environ
             type: 'quantitative',
             scale: { domain: [0, 100] },
             axis: {
-              title: lang === 'ms' ? 'Skor Tekanan (Had Selamat = 50) →' : 'Stress Score (Safe Limit = 50) →',
+              title:
+                lang === 'ms'
+                  ? 'Berapa jauh di atas aras biasa — 0 hingga 100, rendah lebih baik →'
+                  : 'How far above its usual level — 0 to 100, lower is better →',
               tickCount: 5,
               labelFontSize: 11,
               titleFontSize: 12,
@@ -1850,8 +1997,8 @@ function EnvironmentVega({ environment }: { environment?: DashboardData['environ
             },
           },
           tooltip: [
-            { field: 'pollutant', title: lang === 'ms' ? 'Bahan Pencemar' : 'Pollutant' },
-            { field: 'value', title: lang === 'ms' ? 'Skor Tekanan' : 'Stress Score' },
+            { field: 'pollutant', title: lang === 'ms' ? 'Bahan pencemar' : 'Pollutant' },
+            { field: 'value', title: lang === 'ms' ? 'Skor (rendah lebih baik)' : 'Score (lower is better)' },
             { field: 'category', title: lang === 'ms' ? 'Status' : 'Status' },
           ],
         },
@@ -1859,7 +2006,7 @@ function EnvironmentVega({ environment }: { environment?: DashboardData['environ
       {
         mark: { type: 'rule', strokeDash: [4, 4], strokeWidth: 1.5, color: '#9ca3af' },
         encoding: {
-          x: { datum: 50 },
+          x: { datum: AIR_WATCH_LEVEL },
         },
       },
       {
@@ -1882,10 +2029,38 @@ function ForecastPanel({ data }: { data: DashboardData }) {
   const environment = data.environment
   if (!forecast?.horizon?.length) return null
 
-  const modelPillText =
-    lang === 'ms'
-      ? '⚡ Ensembel AI • ETS + AutoReg'
-      : '⚡ AI Ensemble • ETS + AutoReg'
+  // Everything below is read from the extract rather than typed in, so the
+  // prose cannot drift away from the data it describes.
+  const rmse = forecast.backtest.candidates[forecast.backtest.selected_model]?.rmse
+  const rmseText = typeof rmse === 'number' ? rmse.toFixed(1) : '1.7'
+  const horizonTotal = forecast.horizon.reduce((sum, row) => sum + row.forecast_million, 0)
+  const horizonFrom = formatQuarterLabel(forecast.horizon[0]?.period ?? '')
+  const horizonTo = formatQuarterLabel(forecast.horizon[forecast.horizon.length - 1]?.period ?? '')
+  const momentum = forecast.explainability?.find((d) => d.driver === 'Recent demand momentum')
+  // The extract already writes this signed (prepare_data.py uses '{:+.1f}'),
+  // so render the captured value as-is and only add a sign if one is missing.
+  const momentumRaw = momentum?.detail?.match(/([+-]?\d+(?:\.\d+)?)%/)?.[1]
+  const momentumPct = momentumRaw
+    ? /^[+-]/.test(momentumRaw)
+      ? momentumRaw
+      : `${Number(momentumRaw) >= 0 ? '+' : ''}${momentumRaw}`
+    : null
+
+  const modelPillText = lang === 'ms' ? 'Unjuran · Gabungan 2 model' : 'Forecast · 2-model blend'
+
+  // Air panel: every figure in the heading, badge and summary is derived, and
+  // the reading date is surfaced because it trails the tourism data badly.
+  const airEntries = Object.entries(environment?.latest ?? {})
+  const airUnder = airEntries.filter(([, v]) => Math.round(v.stress_score) < AIR_WATCH_LEVEL)
+  const airOver = airEntries.filter(([, v]) => Math.round(v.stress_score) >= AIR_WATCH_LEVEL)
+  const airScore = environment?.stress_score
+  const airMonth = airEntries[0]?.[1]?.latest_month
+  const airAsOf = airMonth
+    ? new Date(airMonth).toLocaleDateString(lang === 'ms' ? 'ms-MY' : 'en-GB', { month: 'long', year: 'numeric' })
+    : null
+  const airOverText = airOver
+    .map(([k, v]) => `${pollutantLabel(k, lang)} (${Math.round(v.stress_score)})`)
+    .join(', ')
 
   return (
     <div className="forecast-row">
@@ -1897,16 +2072,16 @@ function ForecastPanel({ data }: { data: DashboardData }) {
             </span>
             <small>
               {lang === 'ms'
-                ? 'Kesan lonjakan sebelum ia tiba — 305J+ perjalanan diunjurkan hingga S1 2027.'
-                : 'Spot surges before they hit — 305M+ domestic trips projected through Q1 2027.'}
+                ? `Empat suku akan datang berjumlah kira-kira ${horizonTotal.toFixed(0)} juta lawatan — ${horizonFrom} hingga ${horizonTo}.`
+                : `The next four quarters add up to about ${horizonTotal.toFixed(0)} million visits — ${horizonFrom} to ${horizonTo}.`}
             </small>
           </div>
           <span
             className="pill forecast-pill"
             title={
               lang === 'ms'
-                ? 'Model AI gabungan ETS dan AutoReg'
-                : 'Dual-model AI combining ETS and AutoReg'
+                ? 'Menggabungkan dua model ramalan statistik standard (damped ETS dan AutoReg) dan mengekalkan yang paling tepat pada data yang ditahan.'
+                : 'Blends two standard statistical forecasting models (damped ETS and AutoReg) and keeps whichever performed best on held-back data.'
             }
           >
             {modelPillText}
@@ -1918,32 +2093,44 @@ function ForecastPanel({ data }: { data: DashboardData }) {
         </div>
 
         <div className="forecast-foot">
-          <span>{lang === 'ms' ? 'Data DOSM vs Unjuran AI' : 'DOSM Actuals vs AI Forecast'}</span>
+          <span>{lang === 'ms' ? 'Direkod oleh DOSM vs unjuran' : 'Recorded by DOSM vs forecast'}</span>
           <span className="forecast-key">
-            <i /> {lang === 'ms' ? 'Koridor Jangkaan 95%' : '95% Expected Corridor'}
+            <i /> {lang === 'ms' ? 'Julat berkemungkinan (95 daripada 100 kali)' : 'Likely range (95 out of 100 times)'}
           </span>
           <span>
-            {lang === 'ms' ? 'Ketepatan: ±' : 'Precision: ±'}
-            {forecast.backtest.candidates[forecast.backtest.selected_model]?.rmse ?? '1.7'}
-            {lang === 'ms' ? 'J pelawat' : 'M visitors'}
+            {lang === 'ms'
+              ? `Ralat lazim dalam ujian: ±${rmseText}j lawatan`
+              : `Typical miss in testing: ±${rmseText}m visits`}
           </span>
         </div>
 
         <div className="forecast-drivers">
           <div className="driver-card">
-            <small>{lang === 'ms' ? 'MOMENTUM' : 'MOMENTUM'}</small>
-            <strong>+7.2% YoY</strong>
-            <span>{lang === 'ms' ? 'Pertumbuhan rancak pelancong' : 'Robust domestic travel growth'}</span>
+            <small>{lang === 'ms' ? 'ARAH TERKINI' : 'RECENT TREND'}</small>
+            <strong>{momentumPct ? `${momentumPct}%` : '—'}</strong>
+            <span>
+              {lang === 'ms'
+                ? 'Perubahan lawatan sepanjang empat suku terakhir'
+                : 'Change in visits over the last four quarters'}
+            </span>
           </div>
           <div className="driver-card">
-            <small>{lang === 'ms' ? 'MUSIM' : 'SEASONALITY'}</small>
-            <strong>{lang === 'ms' ? 'Puncak Cuti' : 'Holiday Peaks'}</strong>
-            <span>{lang === 'ms' ? 'Diselaraskan untuk lonjakan' : 'Calibrated for festive surges'}</span>
+            <small>{lang === 'ms' ? 'CORAK BERMUSIM' : 'SEASONAL PATTERN'}</small>
+            <strong>{lang === 'ms' ? 'S1 & S4 tersibuk' : 'Q1 & Q4 busiest'}</strong>
+            <span>
+              {lang === 'ms'
+                ? 'Suku pertama dan keempat konsisten paling sibuk'
+                : 'The first and fourth quarters are consistently the busiest'}
+            </span>
           </div>
           <div className="driver-card">
-            <small>{lang === 'ms' ? 'KETEPATAN' : 'ACCURACY'}</small>
-            <strong>±1.7M Margin</strong>
-            <span>{lang === 'ms' ? 'Ralat unjuran minima DOSM' : 'Low variance on DOSM actuals'}</span>
+            <small>{lang === 'ms' ? 'KETEPATAN' : 'HOW ACCURATE'}</small>
+            <strong>±{rmseText}{lang === 'ms' ? 'j lawatan' : 'm visits'}</strong>
+            <span>
+              {lang === 'ms'
+                ? 'Purata sisihan unjuran semasa ujian ke belakang'
+                : 'How far off the forecast was on average in back-testing'}
+            </span>
           </div>
         </div>
       </div>
@@ -1952,19 +2139,25 @@ function ForecastPanel({ data }: { data: DashboardData }) {
         <div className="panel-heading">
           <div className="visual-heading">
             <span>
-              <Shield size={18} /> {lang === 'ms' ? 'Mampukah Ekosistem Menampung Lonjakan?' : 'Can Ecosystems Absorb the Surge?'}
+              <Shield size={18} /> {lang === 'ms' ? 'Adakah kualiti udara masih baik?' : 'Is air quality holding up?'}
             </span>
             <small>
               {lang === 'ms'
-                ? 'Zon penampan ekologi — 5 daripada 6 bahan pencemar di bawah had.'
-                : 'Safe ecological buffer — 5 of 6 pollutants well below limit.'}
+                ? `${airUnder.length} daripada ${airEntries.length} bahan pencemar udara berada di bawah aras perhatian kami.${airAsOf ? ` Bacaan adalah peringkat nasional, dari ${airAsOf}.` : ''}`
+                : `${airUnder.length} of ${airEntries.length} air pollutants sit under our watch level.${airAsOf ? ` Readings are national, from ${airAsOf}.` : ''}`}
             </small>
           </div>
-          <span className="env-badge-low">
-            <span className="stat-badge-dot" aria-hidden="true" style={{ background: '#10b981' }} />
-            <strong>{environment?.stress_score ?? 25.2}/100</strong>
-            <small>{lang === 'ms' ? 'Tekanan Rendah' : 'Low Stress'}</small>
-          </span>
+          <div className="env-badge-stack">
+            <span className="env-badge-low">
+              <span className="stat-badge-dot" aria-hidden="true" style={{ background: '#10b981' }} />
+              <strong>
+                {lang === 'ms' ? 'Tekanan udara ' : 'Air stress '}
+                {airScore !== undefined ? Math.round(airScore) : '—'} / 100
+              </strong>
+              <small>{lang === 'ms' ? 'Rendah — rendah lebih baik' : 'Low — lower is better'}</small>
+            </span>
+            {airAsOf && <DataStatusBadge status="stale" source="OpenDOSM air monitoring stations" period={airAsOf} />}
+          </div>
         </div>
 
         <div className="chart-canvas-wrapper">
@@ -1972,21 +2165,31 @@ function ForecastPanel({ data }: { data: DashboardData }) {
         </div>
 
         <div className="forecast-foot env-foot">
-          <span>{lang === 'ms' ? 'Data: Stesen OpenDOSM' : 'Data: OpenDOSM Stations'}</span>
+          <span>
+            {lang === 'ms'
+              ? `Sumber: stesen pemantauan udara OpenDOSM, nasional${airAsOf ? `, hingga ${airAsOf}` : ''}`
+              : `Source: OpenDOSM air monitoring stations, national${airAsOf ? `, to ${airAsOf}` : ''}`}
+          </span>
           <span className="forecast-key">
             <i style={{ background: '#9ca3af', borderTop: '2px dashed #6b7280' }} />
-            {lang === 'ms' ? 'Had Selamat (50)' : 'Safe Limit (50)'}
+            {lang === 'ms' ? `Aras perhatian (${AIR_WATCH_LEVEL})` : `Watch level (${AIR_WATCH_LEVEL})`}
           </span>
         </div>
 
         <p className="env-summary-text">
           {lang === 'ms' ? (
             <>
-              Kualiti udara kekal optimum pada skor <strong>25.2/100</strong> merentasi stesen OpenDOSM. <strong>5 daripada 6 bahan pencemar</strong> berada jauh di bawah had selamat (50), dengan hanya <strong>SO₂ (54)</strong> dalam zon perhatian berkala.
+              Kualiti udara baik secara keseluruhan — <strong>{airScore !== undefined ? Math.round(airScore) : '—'} daripada 100</strong> pada indeks tekanan kami, di mana nilai rendah lebih baik.{' '}
+              <strong>{airUnder.length} daripada {airEntries.length}</strong> bahan pencemar berada di bawah aras perhatian {AIR_WATCH_LEVEL}.
+              {airOver.length > 0 && <> Hanya <strong>{airOverText}</strong> melepasi aras itu.</>}
+              {airAsOf && <> Bacaan ini adalah peringkat nasional dan bertarikh {airAsOf}, jadi anggaplah ia sebagai konteks latar belakang dan bukan keadaan semasa.</>}
             </>
           ) : (
             <>
-              National air quality remains optimal at <strong>25.2/100</strong> across OpenDOSM stations. <strong>5 of 6 pollutants</strong> sit safely below the 50-point limit, leaving only <strong>SO₂ (54)</strong> for periodic review.
+              Air quality is good overall — <strong>{airScore !== undefined ? Math.round(airScore) : '—'} out of 100</strong> on our stress index, where lower is better.{' '}
+              <strong>{airUnder.length} of the {airEntries.length}</strong> pollutants sit under the watch level of {AIR_WATCH_LEVEL}.
+              {airOver.length > 0 && <> Only <strong>{airOverText}</strong> is over it.</>}
+              {airAsOf && <> These readings are national and date from {airAsOf}, so treat them as background context rather than current conditions.</>}
             </>
           )}
         </p>
@@ -2002,12 +2205,12 @@ function PortfolioVisuals({ states }: { states: StateRecord[] }) {
       <div className="panel sunburst-panel">
         <div className="visual-heading">
           <span>
-            <CircleHelp size={18} /> {lang === 'ms' ? 'Taburan postur portfolio' : 'Portfolio posture distribution'}
+            <CircleHelp size={18} /> {lang === 'ms' ? 'Apa yang diperlukan setiap negeri' : 'What each state needs'}
           </span>
           <small>
             {lang === 'ms'
-              ? 'Pecahan semua 16 negeri & wilayah mengikut keutamaan tindakan dasar.'
-              : 'Breakdown of all 16 states & territories ranked by policy action priority.'}
+              ? 'Kesemua 16 negeri dan wilayah, dikumpulkan mengikut tindakan yang kami cadangkan.'
+              : 'All 16 states and territories, grouped by the action we recommend.'}
           </small>
         </div>
         <div className="chart-canvas-wrapper" style={{ minHeight: 'auto', marginTop: 10 }}>
@@ -2017,12 +2220,12 @@ function PortfolioVisuals({ states }: { states: StateRecord[] }) {
       <div className="panel sankey-panel">
         <div className="visual-heading">
           <span>
-            <Waypoints size={18} /> {lang === 'ms' ? 'Matriks bukti-ke-tindakan' : 'Evidence-to-action matrix'}
+            <Waypoints size={18} /> {lang === 'ms' ? 'Apa yang memacu setiap cadangan' : 'What drives each recommendation'}
           </span>
           <small>
             {lang === 'ms'
-              ? 'Bagaimana isyarat data mencetuskan dasar (skor ≥70% adalah pemacu utama).'
-              : 'How data signals trigger policy actions (scores ≥70% are primary triggers).'}
+              ? 'Sekuat mana setiap data menolak sesebuah negeri ke arah setiap tindakan. 70% ke atas bermakna ia faktor penentu.'
+              : 'How strongly each piece of data pushes a state toward each action. 70% or more means it is the deciding factor.'}
           </small>
         </div>
         <div className="chart-canvas-wrapper" style={{ minHeight: 'auto', marginTop: 10 }}>
@@ -2264,22 +2467,27 @@ function DashboardContent() {
 
       <div className="layout">
         <section className="content">
-          <div className="content-heading">
-            <div>
-              <div className="hero-eyebrow-badge">
-                <span className="eyebrow-dot" aria-hidden="true" />
-                <span className="eyebrow-text">{t('heroEyebrow')}</span>
+          {/* Overview only. Policy, Scenario, Decisions and Method each carry
+              their own hero, so rendering this above all five put two
+              competing titles on four of the tabs. */}
+          {tab === 'overview' && (
+            <div className="content-heading">
+              <div>
+                <div className="hero-eyebrow-badge">
+                  <span className="eyebrow-dot" aria-hidden="true" />
+                  <span className="eyebrow-text">{t('heroEyebrow')}</span>
+                </div>
+                <h1>
+                  {t('heroH1Line1')}
+                  <br />
+                  <em>{t('heroH1Line2')}</em>
+                </h1>
+                <p className="heading-copy">
+                  {t('heroCopy')}
+                </p>
               </div>
-              <h1>
-                {t('heroH1Line1')}
-                <br />
-                <em>{t('heroH1Line2')}</em>
-              </h1>
-              <p className="heading-copy">
-                {t('heroCopy')}
-              </p>
             </div>
-          </div>
+          )}
 
           {tab === 'overview' && (
             <div className="overview-dashboard">
@@ -2289,29 +2497,32 @@ function DashboardContent() {
                   value="290.1m"
                   note={t('statDomesticVisitorsNote')}
                   trend="+11.5%"
+                  trendSuffix={lang === 'ms' ? 'vs 2024' : 'vs 2024'}
                   icon={<TrendingUp size={18} />}
                   tone="teal"
                 />
                 <StatCard
-                  label={lang === 'ms' ? 'Perbelanjaan pelancongan' : 'Tourism expenditure'}
+                  label={lang === 'ms' ? 'Perbelanjaan pelancongan' : 'Tourism spending (2025)'}
                   value="RM121.3b"
-                  note={lang === 'ms' ? 'Jumlah 2025' : '2025 total'}
+                  note={lang === 'ms' ? 'Jumlah 2025' : 'Spent by domestic visitors'}
                   trend="+13.6%"
+                  trendSuffix={lang === 'ms' ? 'vs 2024' : 'vs 2024'}
                   icon={<BarChart3 size={18} />}
                   tone="emerald"
                 />
                 <StatCard
-                  label={lang === 'ms' ? 'Nadi suku tahunan terkini' : 'Latest quarterly pulse'}
+                  label={lang === 'ms' ? 'Suku tahun terkini' : 'Most recent quarter'}
                   value={`${data.latest_quarter?.visitors_million ?? 74.7}m`}
-                  note={lang === 'ms' ? `Pelawat ${data.latest_quarter?.quarter ?? 'S1 2026'}` : `${data.latest_quarter?.quarter ?? 'Q1 2026'} visitors`}
+                  note={lang === 'ms' ? `Lawatan pada ${data.latest_quarter?.quarter ?? 'S1 2026'} (Jan–Mac)` : `Visits in ${data.latest_quarter?.quarter ?? 'Q1 2026'} (Jan–Mar)`}
                   trend={`+${data.latest_quarter?.visitor_yoy ?? 7.2}%`}
+                  trendSuffix={lang === 'ms' ? 'vs 2025' : 'vs 2025'}
                   icon={<Target size={18} />}
                   tone="blue"
                 />
                 <StatCard
-                  label={lang === 'ms' ? 'Senarai pemantauan tekanan' : 'Pressure watchlist'}
-                  value={lang === 'ms' ? `${sortedPressure.filter((state) => state.pressure_score >= 60).length} negeri` : `${sortedPressure.filter((state) => state.pressure_score >= 60).length} states`}
-                  note={lang === 'ms' ? 'Skor saringan ≥ 60' : 'Screening score ≥ 60'}
+                  label={lang === 'ms' ? 'Negeri perlu disemak' : 'States needing review'}
+                  value={lang === 'ms' ? `${sortedPressure.filter((state) => state.pressure_score >= 60).length} daripada ${data.states.length}` : `${sortedPressure.filter((state) => state.pressure_score >= 60).length} of ${data.states.length}`}
+                  note={lang === 'ms' ? 'Skor tekanan 60 ke atas' : 'Pressure score 60 or above'}
                   trend={lang === 'ms' ? 'Perlu semakan' : 'Review needed'}
                   icon={<TriangleAlert size={18} />}
                   tone="amber"
@@ -2332,17 +2543,18 @@ function DashboardContent() {
                       <h2>{lang === 'ms' ? 'Keutamaan perhatian seterusnya' : 'Where attention goes next'}</h2>
                     </div>
                     <button className="more-button" onClick={() => setShowAll((value) => !value)}>
-                      {showAll ? (lang === 'ms' ? 'Papar 5 teratas' : 'Show top 5') : (lang === 'ms' ? 'Papar semua 16' : 'View all 16')} <ChevronRight size={15} />
+                      {showAll ? (lang === 'ms' ? 'Papar 8 teratas' : 'Show top 8') : (lang === 'ms' ? 'Papar semua 16' : 'View all 16')} <ChevronRight size={15} />
                     </button>
                   </div>
                   <div className="priority-list">
-                    {sortedPressure.slice(0, showAll ? sortedPressure.length : 5).map((state, index) => (
+                    {sortedPressure.slice(0, showAll ? sortedPressure.length : 8).map((state, index) => (
                       <button
                         className={`priority-item ${state.state === selected ? 'selected' : ''}`}
                         key={state.state}
                         onClick={() => setSelected(state.state)}
+                        aria-pressed={state.state === selected}
                       >
-                        <span className="rank">0{index + 1}</span>
+                        <span className="rank">{String(index + 1).padStart(2, '0')}</span>
                         <span className="priority-name">
                           <strong>{state.state}</strong>
                           <small>{translateAction(state.action)}</small>
@@ -2357,7 +2569,7 @@ function DashboardContent() {
                   </div>
                   <div className="queue-note">
                     <CircleHelp size={16} />
-                    <span>{lang === 'ms' ? 'Kedudukan mengimbangi kepadatan permintaan, kepantasan pertumbuhan pelawat, dan tekanan inflasi IHP negeri.' : 'Ranking balances demand density, visitor growth velocity, and state CPI inflation pressure.'}</span>
+                    <span>{lang === 'ms' ? 'Disusun mengikut sesak mana sesebuah negeri, sepantas mana jumlah pelawat meningkat, dan berapa banyak harga tempatan naik.' : 'Ranked by how crowded a state is, how fast visitor numbers are rising, and how much local prices have gone up.'}</span>
                   </div>
                 </div>
               </div>
@@ -2366,9 +2578,9 @@ function DashboardContent() {
                 <div className="panel-heading">
                   <div className="visual-heading">
                     <span>
-                      <TrendingUp size={18} /> {lang === 'ms' ? 'Negeri tumpuan tekanan tertinggi' : 'State pressure leaders'}
+                      <TrendingUp size={18} /> {lang === 'ms' ? 'Negeri paling tertekan' : 'States under the most pressure'}
                     </span>
-                    <small>{lang === 'ms' ? 'Destinasi utama yang memerlukan perhatian segera. Pilih bendera untuk fokus peta dan kad bukti.' : 'Top destinations requiring near-term attention. Select a flag to focus the map and evidence card.'}</small>
+                    <small>{lang === 'ms' ? 'Lapan negeri yang paling tertekan. Klik mana-mana titik pada carta untuk memuatkannya ke peta dan panel butiran di bawah.' : 'The eight states under the most pressure. Click any point on the chart to load it into the map and the detail panel below.'}</small>
                   </div>
                   <span className="pill">{lang === 'ms' ? '8 Teratas' : 'Top 8'}</span>
                 </div>
@@ -2379,8 +2591,9 @@ function DashboardContent() {
                         className={`state-flag state-flag-${index + 1} ${state.state === selected ? 'selected' : ''}`}
                         key={state.state}
                         onClick={() => setSelected(state.state)}
+                        aria-pressed={state.state === selected}
                       >
-                        <span className="flag-rank">0{index + 1}</span>
+                        <span className="flag-rank">{String(index + 1).padStart(2, '0')}</span>
                         <span className="flag-mark">MY</span>
                         <span>
                           <strong>{state.state}</strong>
@@ -2391,7 +2604,7 @@ function DashboardContent() {
                     ))}
                   </div>
                   <div className="leader-chart">
-                    <TopStatesVega states={data.states} />
+                    <TopStatesVega states={data.states} selected={selected} onSelect={setSelected} />
                   </div>
                 </div>
               </div>
@@ -2401,12 +2614,12 @@ function DashboardContent() {
                   <div className="panel-heading">
                     <div>
                       <span className="eyebrow">{lang === 'ms' ? 'Matriks keputusan' : 'Decision matrix'}</span>
-                      <h2>{lang === 'ms' ? 'Tekanan × kemakmuran' : 'Pressure × prosperity'}</h2>
+                      <h2>{lang === 'ms' ? 'Tekanan berbanding manfaat tempatan' : 'Pressure vs local benefit'}</h2>
                     </div>
                     <span className="pill">{lang === 'ms' ? '16 negeri & wilayah' : '16 states & territories'}</span>
                   </div>
                   <div className="matrix-vega">
-                    <MatrixVega states={data.states} />
+                    <MatrixVega states={data.states} selected={selected} onSelect={setSelected} />
                   </div>
                 </div>
                 <div className="panel profile-panel">
@@ -2416,7 +2629,7 @@ function DashboardContent() {
                       <h2>{selectedState?.state || '—'}</h2>
                     </div>
                     <span className={`confidence ${selectedState?.confidence?.toLowerCase()}`}>
-                      {translateConfidence(selectedState?.confidence ?? '')} {lang === 'ms' ? 'keyakinan' : 'confidence'}
+                      {lang === 'ms' ? 'Keyakinan data: ' : 'Data confidence: '}{translateConfidence(selectedState?.confidence ?? '').toLowerCase()}
                     </span>
                   </div>
                   {selectedState && (
@@ -2426,7 +2639,7 @@ function DashboardContent() {
                           <Target size={20} />
                         </div>
                         <div>
-                          <span className="eyebrow">{lang === 'ms' ? 'Cadangan hala tuju dasar' : 'Recommended policy direction'}</span>
+                          <span className="eyebrow">{lang === 'ms' ? 'Apa yang kami cadangkan' : 'What we recommend'}</span>
                           <strong>{translateAction(selectedState.action)}</strong>
                           <p>{selectedState.action_detail}</p>
                         </div>
@@ -2434,38 +2647,41 @@ function DashboardContent() {
                       <div className="score-bars">
                         <div className="score-card risk">
                           <div className="score-card-top">
-                            <span>{lang === 'ms' ? 'Risiko tekanan' : 'Pressure risk'}</span>
+                            <span>{lang === 'ms' ? 'Tekanan' : 'Pressure'}</span>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                               <strong>{selectedState.pressure_score}<small>/100</small></strong>
                               <DataStatusBadge status="derived" compact source="DOSM DTS 2025 + CPI + Population" period="2025" />
                             </div>
                           </div>
-                          <ScoreBar label={lang === 'ms' ? 'Risiko tekanan' : 'Pressure risk'} value={selectedState.pressure_score} tone="coral" />
-                          <p>{lang === 'ms' ? 'Indeks lebih tinggi menandakan tekanan permintaan lebih kuat terhadap kapasiti tempatan.' : 'Higher index means stronger demand pressure against local capacity.'}</p>
+                          <ScoreBar label={lang === 'ms' ? 'Tekanan' : 'Pressure'} value={selectedState.pressure_score} tone="coral" />
+                          <p>{lang === 'ms' ? 'Sejauh mana permintaan pelawat menekan jalan raya, hotel dan perkhidmatan di sini.' : 'How hard visitor demand is pushing on roads, hotels and services here.'}</p>
                         </div>
                         <div className="score-card potential">
                           <div className="score-card-top">
-                            <span>{lang === 'ms' ? 'Potensi kemakmuran' : 'Prosperity potential'}</span>
+                            <span>{lang === 'ms' ? 'Manfaat tempatan' : 'Local benefit'}</span>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                               <strong>{selectedState.prosperity_score}<small>/100</small></strong>
                               <DataStatusBadge status="derived" compact source="DOSM DTS 2025 + Population" period="2025" />
                             </div>
                           </div>
-                          <ScoreBar label={lang === 'ms' ? 'Potensi kemakmuran' : 'Prosperity potential'} value={selectedState.prosperity_score} />
-                          <p>{lang === 'ms' ? 'Indeks lebih tinggi menunjukkan ruang penyerapan pelancongan bermalam bernilai tinggi.' : 'Higher index indicates room for high-value overnight tourism capture.'}</p>
+                          <ScoreBar label={lang === 'ms' ? 'Manfaat tempatan' : 'Local benefit'} value={selectedState.prosperity_score} />
+                          <p>{lang === 'ms' ? 'Berapa banyak ruang yang ada untuk pelawat yang bermalam dan berbelanja lebih.' : 'How much room there is for visitors who stay overnight and spend more.'}</p>
                         </div>
                       </div>
                       <div className="metric-line">
                         <span>
-                          {lang === 'ms' ? 'Pelawat / 100 penduduk' : 'Visitors / 100 residents'} <strong>{selectedState.visitors_per_100_residents}</strong>
+                          {lang === 'ms' ? 'Lawatan setiap penduduk' : 'Visits per resident'}{' '}
+                          <strong>{visitsPerResident(selectedState.visitors_per_100_residents)}</strong>
                           <DataStatusBadge status="derived" compact />
                         </span>
                         <span>
-                          {lang === 'ms' ? 'Pertumbuhan pelawat' : 'Visitor growth'} <strong className="green">{formatPct(selectedState.visitor_growth_yoy)}</strong>
+                          {lang === 'ms' ? 'Pertumbuhan pelawat berbanding tahun lalu' : 'Visitor growth vs last year'}{' '}
+                          <strong className="green">{formatPct(selectedState.visitor_growth_yoy)}</strong>
                           <DataStatusBadge status="derived" compact />
                         </span>
                         <span>
-                          {lang === 'ms' ? 'Komposisi pelancong' : 'Tourist mix'} <strong>{selectedState.tourist_mix_pct}%</strong>
+                          {lang === 'ms' ? 'Bahagian yang bermalam' : 'Share who stay overnight'}{' '}
+                          <strong>{selectedState.tourist_mix_pct}%</strong>
                           <DataStatusBadge status="observed" compact />
                         </span>
                       </div>
@@ -2511,7 +2727,7 @@ function DashboardContent() {
             <div className="scenario-view">
               <div className="scenario-hero">
                 <div>
-                  <p className="kicker">{lang === 'ms' ? 'SIMULATOR INTERVENSI' : 'INTERVENTION SIMULATOR'}</p>
+                  <p className="kicker">{lang === 'ms' ? 'ALAT ANDAI' : 'WHAT-IF TOOL'}</p>
                   <h2>
                     {lang === 'ms' ? 'Bagaimana jika kita anjakkan permintaan' : 'What if we shift demand'}
                     <br />
@@ -2519,8 +2735,8 @@ function DashboardContent() {
                   </h2>
                   <p>
                     {lang === 'ms'
-                      ? 'Terokai intervensi portfolio berasaskan isyarat peringkat negeri DOSM. Setiap kawalan adalah telus tanpa sebarang algoritma tertutup yang disembunyikan.'
-                      : 'Explore a directional portfolio intervention using DOSM’s state-level signals. Every control is transparent; no black-box recommendation is concealed.'}
+                      ? 'Cuba alihkan promosi dan pelaburan antara negeri dan lihat bagaimana skor tekanan bertindak balas. Setiap pengiraan ditunjukkan dalam tab Kaedah — tiada apa yang disembunyikan.'
+                      : 'Try moving promotion and investment between states and see how the pressure scores respond. Every calculation is shown in the Method tab — nothing is hidden.'}
                   </p>
                 </div>
                 <div className="scenario-orbit">
@@ -2536,13 +2752,13 @@ function DashboardContent() {
                 <div className="panel control-panel">
                   <div className="panel-heading">
                     <div>
-                      <span className="eyebrow">{lang === 'ms' ? 'Tuas dasar' : 'Policy levers'}</span>
-                      <h2>{lang === 'ms' ? 'Tetapkan had sempadan' : 'Set guardrails'}</h2>
+                      <span className="eyebrow">{lang === 'ms' ? 'Tetapan anda' : 'Your settings'}</span>
+                      <h2>{lang === 'ms' ? 'Tetapkan hadnya' : 'Set the limits'}</h2>
                     </div>
                     <SlidersHorizontal size={20} />
                   </div>
                   <label>
-                    {lang === 'ms' ? 'Anjakan promosi kemuncak ke negeri bertekanan rendah' : 'Shift peak promotion to lower-pressure states'} <output>{promotion}%</output>
+                    {lang === 'ms' ? 'Berapa banyak promosi musim puncak untuk dialihkan ke negeri yang lebih lengang' : 'How much peak-season promotion to move to quieter states'} <output>{promotion}%</output>
                   </label>
                   <input
                     type="range"
@@ -2552,11 +2768,11 @@ function DashboardContent() {
                     onChange={(event) => setPromotion(+event.target.value)}
                   />
                   <div className="range-note">
-                    <span>{lang === 'ms' ? '0% kempen menyeluruh' : '0% broad campaign'}</span>
-                    <span>{lang === 'ms' ? '30% anjakan permintaan' : '30% demand shift'}</span>
+                    <span>{lang === 'ms' ? '0% — promosi sama rata' : '0% — promote everywhere equally'}</span>
+                    <span>{lang === 'ms' ? '30% — alih sepertiga' : '30% — move a third away'}</span>
                   </div>
                   <label>
-                    {lang === 'ms' ? 'Indeks pelaburan kapasiti' : 'Capacity investment index'} <output>{capacity}</output>
+                    {lang === 'ms' ? 'Berapa banyak untuk dibelanjakan pada kapasiti berbanding promosi' : 'How much to spend on capacity instead of promotion'} <output>{capacity} / 100</output>
                   </label>
                   <input
                     type="range"
@@ -2566,11 +2782,11 @@ function DashboardContent() {
                     onChange={(event) => setCapacity(+event.target.value)}
                   />
                   <div className="range-note">
-                    <span>{lang === 'ms' ? 'Berasaskan promosi' : 'Promotion-led'}</span>
-                    <span>{lang === 'ms' ? 'Berasaskan kapasiti' : 'Capacity-led'}</span>
+                    <span>{lang === 'ms' ? '0 — semua promosi' : '0 — all promotion'}</span>
+                    <span>{lang === 'ms' ? '100 — semua kapasiti' : '100 — all capacity'}</span>
                   </div>
                   <label>
-                    {lang === 'ms' ? 'Had siling skor tekanan maksimum' : 'Maximum pressure score cap'} <output>{pressureCap}</output>
+                    {lang === 'ms' ? 'Anggap sesebuah negeri terlebih tekanan melebihi' : 'Treat a state as over-pressured above'} <output>{pressureCap}</output>
                   </label>
                   <input
                     type="range"
@@ -2580,23 +2796,23 @@ function DashboardContent() {
                     onChange={(event) => setPressureCap(+event.target.value)}
                   />
                   <div className="range-note">
-                    <span>{lang === 'ms' ? 'Had perlindungan' : 'Protective cap'}</span>
-                    <span>{lang === 'ms' ? 'Pencarian pertumbuhan' : 'Growth-seeking'}</span>
+                    <span>{lang === 'ms' ? '20 — lindungi awal' : '20 — protect early'}</span>
+                    <span>{lang === 'ms' ? '100 — biar berkembang' : '100 — let growth run'}</span>
                   </div>
                   <button className="primary-button full" onClick={runScenario}>
-                    <Sparkles size={16} /> {lang === 'ms' ? 'Simulasi portfolio' : 'Simulate portfolio'}
+                    <Sparkles size={16} /> {lang === 'ms' ? 'Jalankan' : 'Run'}
                   </button>
                   <p className="control-footnote">
                     {lang === 'ms'
-                      ? 'Model saringan menganggarkan imbangan arah dan anjakan portfolio tanpa membuat tuntutan ekonometrik kausal.'
-                      : 'The screening model estimates directional trade-offs and portfolio shifts. It does not claim causal econometric impact.'}
+                      ? 'Ini menunjukkan arah dan anggaran kasar sesuatu imbangan. Ia bukan ramalan tentang apa yang benar-benar akan berlaku.'
+                      : 'This shows the direction and rough size of a trade-off. It is not a prediction of what would actually happen if you did this.'}
                   </p>
                 </div>
                 <div className="panel scenario-results">
                   <div className="panel-heading">
                     <div>
                       <span className="eyebrow">{lang === 'ms' ? 'Hasil senario' : 'Scenario result'}</span>
-                      <h2>{scenario ? (lang === 'ms' ? 'Had sempadan mengubah keutamaan' : 'Guardrails change the queue') : (lang === 'ms' ? 'Sedia untuk pemodelan' : 'Ready to model')}</h2>
+                      <h2>{scenario ? (lang === 'ms' ? 'Bagaimana tetapan anda mengubah gambaran' : 'How your settings change the picture') : (lang === 'ms' ? 'Sedia untuk dijalankan' : 'Ready to run')}</h2>
                     </div>
                     {scenario && <span className="pill">{lang === 'ms' ? 'Anggaran awal' : 'Preview estimate'}</span>}
                   </div>
@@ -2605,44 +2821,52 @@ function DashboardContent() {
                       <div className="empty-icon">
                         <Sparkles size={22} />
                       </div>
-                      <strong>{lang === 'ms' ? 'Pilih had sempadan dasar anda' : 'Choose your guardrails'}</strong>
-                      <p>{lang === 'ms' ? 'Laraskan tuas dasar di sebelah kiri, kemudian jalankan simulasi untuk menganggarkan pengurangan tekanan berbanding peningkatan nilai.' : 'Adjust the policy levers on the left, then run the simulation to model pressure reduction versus value lift.'}</p>
+                      <strong>{lang === 'ms' ? 'Tetapkan had anda' : 'Set your limits'}</strong>
+                      <p>{lang === 'ms' ? 'Alihkan peluncur di sebelah kiri, kemudian tekan Jalankan untuk melihat perubahan tekanan dan manfaat tempatan.' : 'Move the sliders on the left, then press Run to see how pressure and local benefit would change.'}</p>
                     </div>
                   ) : (
                     <>
                       <div className="scenario-kpis">
                         <div>
-                          <small>{lang === 'ms' ? 'Negeri tekanan tinggi' : 'High-pressure states'}</small>
+                          <small>{lang === 'ms' ? 'Negeri melebihi had anda' : 'States over your limit'}</small>
                           <strong>
                             {scenario.before_high_pressure} → {scenario.after_high_pressure}
                           </strong>
                           <span>
-                            <ArrowDownRight size={14} /> {lang === 'ms' ? 'berkurang melepasi had' : 'fewer above cap'}
+                            <ArrowDownRight size={14} /> {lang === 'ms' ? 'lebih sedikit melepasi had' : 'fewer above the limit'}
                           </span>
                         </div>
                         <div>
-                          <small>{lang === 'ms' ? 'Pengurangan tekanan' : 'Pressure reduced'}</small>
+                          <small>{lang === 'ms' ? 'Jumlah tekanan dikurangkan' : 'Total pressure removed'}</small>
                           <strong>{scenario.estimated_pressure_reduction}</strong>
                           <span>
-                            <ArrowDownRight size={14} /> {lang === 'ms' ? 'mata indeks' : 'index points'}
+                            <ArrowDownRight size={14} /> {lang === 'ms' ? 'mata, semua 16 negeri' : 'points across all 16 states'}
                           </span>
                         </div>
                         <div>
-                          <small>{lang === 'ms' ? 'Peningkatan nilai' : 'Value lift'}</small>
+                          <small>{lang === 'ms' ? 'Tambahan manfaat tempatan' : 'Extra local benefit'}</small>
                           <strong>+{scenario.estimated_value_lift}</strong>
                           <span>
-                            <ArrowUpRight size={14} /> {lang === 'ms' ? 'mata indeks' : 'index points'}
+                            <ArrowUpRight size={14} /> {lang === 'ms' ? 'mata, semua 16 negeri' : 'points across all 16 states'}
                           </span>
                         </div>
                       </div>
                       <div className="scenario-table">
                         <div className="table-head">
                           <span>{lang === 'ms' ? 'Negeri' : 'State'}</span>
-                          <span>{lang === 'ms' ? 'Anjakan tekanan' : 'Pressure shift'}</span>
-                          <span>{lang === 'ms' ? 'Anjakan nilai' : 'Value shift'}</span>
+                          <span>{lang === 'ms' ? 'Perubahan tekanan' : 'Change in pressure'}</span>
+                          <span>{lang === 'ms' ? 'Perubahan manfaat tempatan' : 'Change in local benefit'}</span>
                         </div>
                         {[...scenario.states]
-                          .sort((a, b) => a.pressure_after - b.pressure_after)
+                          // Sorted by how much each state actually moves. Sorting by
+                          // pressure_after ascending listed the eight calmest states,
+                          // all showing the same small spillover, and hid Putrajaya
+                          // and Kuala Lumpur - the two the levers are aimed at.
+                          .sort(
+                            (a, b) =>
+                              Math.abs(b.pressure_after - b.pressure_before) -
+                              Math.abs(a.pressure_after - a.pressure_before)
+                          )
                           .slice(0, 8)
                           .map((item) => (
                             <div className="table-row" key={item.state}>

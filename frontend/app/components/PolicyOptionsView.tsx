@@ -99,9 +99,9 @@ function OptionCard({ option, isExpanded, onToggle }: { option: PolicyOption; is
             <OptionField label={lang === 'ms' ? 'Tarikh semakan' : 'Review date'} value={option.review_date} icon={<Clock size={13} />} />
           </div>
 
-          <OptionSection label={lang === 'ms' ? 'Keterangan intervensi' : 'Intervention description'} value={option.intervention_description} />
+          <OptionSection label={lang === 'ms' ? 'Keterangan intervensi' : 'What it involves'} value={option.intervention_description} />
           <OptionSection label={t('evidenceSupport')} value={option.evidence_supporting} status="observed" />
-          <OptionSection label={lang === 'ms' ? 'Jurang data / bukti' : 'Evidence gaps'} value={option.evidence_gaps} status="unavailable" isWarning />
+          <OptionSection label={lang === 'ms' ? 'Jurang data / bukti' : 'What the evidence does not cover'} value={option.evidence_gaps} status="unavailable" isWarning />
           <OptionSection label={t('expectedOutput')} value={option.expected_output} />
           <OptionSection label={t('intendedOutcome')} value={option.intended_outcome} />
           <OptionSection label={t('riskMitigation')} value={option.risk_mitigation} isWarning />
@@ -148,7 +148,7 @@ function OptionSection({
 }
 
 function TheoryOfChange({ option }: { option: PolicyOption }) {
-  const { lang, t } = useLanguage()
+  const { lang } = useLanguage()
   const steps: TheoryStep[] = [
     { label: lang === 'ms' ? 'Isu dikenal pasti' : 'Problem identified', icon: <AlertTriangle size={14} />, color: '#7c331d' },
     { label: option.intervention_description.split('.')[0] + '.', icon: <Shield size={14} />, color: '#9c6114' },
@@ -158,7 +158,6 @@ function TheoryOfChange({ option }: { option: PolicyOption }) {
   ]
   return (
     <div className="theory-of-change">
-      <div className="toc-label">{t('tocTitle')}</div>
       <div className="toc-chain">
         {steps.map((step, i) => (
           <div key={i} className="toc-step">
@@ -167,7 +166,7 @@ function TheoryOfChange({ option }: { option: PolicyOption }) {
             {i < steps.length - 1 && (
               <div className="toc-arrow">
                 <span>→</span>
-                <small>{lang === 'ms' ? 'andaian' : 'assumption'}</small>
+                <small>{lang === 'ms' ? 'andaian' : 'if this holds'}</small>
               </div>
             )}
           </div>
@@ -188,13 +187,18 @@ export function PolicyOptionsView({
   const [expandedId, setExpandedId] = useState<string | null>(options[0]?.option_id ?? null)
   const [tocOption, setTocOption] = useState<number>(1)
 
-  const activeOption = options.find((o) => o.option_number === tocOption) ?? options[1]
+  // options[1] was the previous fallback and is undefined for a short list,
+  // which then crashed TheoryOfChange on intervention_description.split().
+  const activeOption =
+    options.find((o) => o.option_number === tocOption) ??
+    options.find((o) => o.type !== 'baseline') ??
+    options[0]
 
   return (
     <div className="policy-view">
       <div className="policy-hero">
         <div>
-          <p className="kicker">{lang === 'ms' ? 'RUANG KERJA PILIHAN DASAR' : 'POLICY OPTIONS WORKSPACE'}</p>
+          <p className="kicker">{lang === 'ms' ? 'PILIHAN DASAR' : 'POLICY OPTIONS'}</p>
           <h2>
             {lang === 'ms' ? 'Pilihan intervensi sedia ada' : 'What choices are available'}
             <br />
@@ -209,9 +213,9 @@ export function PolicyOptionsView({
         <div className="policy-seal">
           <Shield size={26} />
           <span>
-            {lang === 'ms' ? 'Berasaskan' : 'Evidence'}
+            {lang === 'ms' ? 'Berasaskan' : 'Based on'}
             <br />
-            <strong>{lang === 'ms' ? 'bukti DOSM' : 'grounded'}</strong>
+            <strong>{lang === 'ms' ? 'bukti DOSM' : 'DOSM data'}</strong>
           </span>
         </div>
       </div>
@@ -232,7 +236,7 @@ export function PolicyOptionsView({
         <div className="panel-heading">
           <div>
             <span className="eyebrow">{t('tocTitle')}</span>
-            <h2>{lang === 'ms' ? 'Daripada Masalah ke Kemakmuran' : 'From problem to value'}</h2>
+            <h2>{lang === 'ms' ? 'Daripada Masalah ke Kemakmuran' : 'From problem to result'}</h2>
           </div>
           <div className="toc-option-selector">
             {options.filter((o) => o.type !== 'baseline').map((o) => (
@@ -251,7 +255,7 @@ export function PolicyOptionsView({
         <p className="toc-caveat">
           {lang === 'ms'
             ? 'Setiap anak panah mewakili andaian. Andaian wajar disemak dan disokong oleh bukti data sebelum keputusan diluluskan secara rasmi.'
-            : 'Every arrow represents an assumption. Assumptions should be reviewed and supported by evidence before a decision is approved.'}
+            : 'Each arrow is a step we are assuming will hold. Check each one against evidence before approving anything.'}
         </p>
       </div>
     </div>

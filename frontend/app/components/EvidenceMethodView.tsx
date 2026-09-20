@@ -60,6 +60,20 @@ type Props = {
   generatedAt: string
 }
 
+// The extract stores an ISO-8601 timestamp; showing it raw to a policy
+// audience is not a date, it is a machine string.
+function formatBuiltAt(value: string, lang: 'en' | 'ms') {
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return value
+  return parsed.toLocaleString(lang === 'ms' ? 'ms-MY' : 'en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 function SourceCard({ source, quality }: { source: Source; quality?: QualityCheck }) {
   const { lang } = useLanguage()
   const [open, setOpen] = useState(false)
@@ -107,10 +121,10 @@ function SourceCard({ source, quality }: { source: Source; quality?: QualityChec
             <SourceField label={lang === 'ms' ? 'Liputan geografi' : 'Geographic coverage'} value={source.geographic_coverage} />
             <SourceField label={lang === 'ms' ? 'Unit ukuran' : 'Unit of measure'} value={source.unit_of_measure} />
             <SourceField label={lang === 'ms' ? 'Status semakan' : 'Revision status'} value={source.revision_status} />
-            <SourceField label={lang === 'ms' ? 'Versi saluran paip' : 'Pipeline version'} value={source.pipeline_version} />
+            <SourceField label={lang === 'ms' ? 'Versi saluran paip' : 'Processing version'} value={source.pipeline_version} />
             <SourceField label={lang === 'ms' ? 'Penyelaras' : 'Contact'} value={source.contact} />
           </div>
-          <SourceField label={lang === 'ms' ? 'Definisi operasi' : 'Definitions'} value={source.definitions} wide />
+          <SourceField label={lang === 'ms' ? 'Definisi operasi' : 'How this data defines its terms'} value={source.definitions} wide />
           <SourceField label={lang === 'ms' ? 'Semakan kualiti dikenakan' : 'Quality checks applied'} value={source.quality_checks} wide />
           <SourceField label={lang === 'ms' ? 'Kekangan & jurang diketahui' : 'Known gaps and limitations'} value={source.known_gaps} wide isWarning />
           <a className="source-url-link" href={source.url} target="_blank" rel="noreferrer">
@@ -152,23 +166,26 @@ function QualityPanel({ checks, healthyCount, staleCount }: { checks: QualityChe
           <h2>{lang === 'ms' ? 'Pemeriksaan kesihatan sumber' : 'Source health checks'}</h2>
         </div>
         <span className={`quality-summary-badge ${staleCount > 0 ? 'has-issues' : 'all-ok'}`}>
-          {healthyCount}/{healthyCount + staleCount} {lang === 'ms' ? 'sumber sihat' : 'sources healthy'}
-          {staleCount > 0 && ` · ${staleCount} ${lang === 'ms' ? 'lapuk' : 'stale'}`}
+          {healthyCount} {lang === 'ms' ? 'daripada' : 'of'} {healthyCount + staleCount}{' '}
+          {lang === 'ms' ? 'set data terkini' : 'datasets up to date'}
         </span>
       </div>
       <div className="quality-table">
         <div className="quality-thead">
           <span>{lang === 'ms' ? 'Set Data' : 'Dataset'}</span>
-          <span>{lang === 'ms' ? 'Medan' : 'Fields'}</span>
-          <span>{lang === 'ms' ? 'Jenis' : 'Types'}</span>
-          <span>{lang === 'ms' ? 'Jumlah' : 'Totals'}</span>
-          <span>{lang === 'ms' ? 'Duplikasi' : 'Duplicates'}</span>
-          <span>{lang === 'ms' ? 'Lapuk' : 'Stale'}</span>
-          <span>{lang === 'ms' ? 'Kemaskini' : 'Last refresh'}</span>
+          <span>{lang === 'ms' ? 'Medan lengkap' : 'All fields present'}</span>
+          <span>{lang === 'ms' ? 'Jenis betul' : 'Correct types'}</span>
+          <span>{lang === 'ms' ? 'Jumlah padan' : 'Totals match'}</span>
+          <span>{lang === 'ms' ? 'Baris berulang' : 'Duplicate rows'}</span>
+          <span>{lang === 'ms' ? 'Terkini' : 'Up to date'}</span>
+          <span>{lang === 'ms' ? 'Disemak' : 'Last checked'}</span>
         </div>
         {checks.map((c) => (
           <div key={c.dataset_id} className={`quality-row ${c.stale ? 'stale-row' : ''}`}>
-            <span title={c.name}>{c.dataset_id}</span>
+            <span title={c.name}>
+              <strong>{c.dataset_id}</strong>
+              <small>{c.name}</small>
+            </span>
             <span>{c.required_fields_present ? <CheckCircle2 size={14} className="ok" /> : <XCircle size={14} className="fail" />}</span>
             <span>{c.types_valid ? <CheckCircle2 size={14} className="ok" /> : <XCircle size={14} className="fail" />}</span>
             <span>{c.totals_reconciled ? <CheckCircle2 size={14} className="ok" /> : '—'}</span>
@@ -178,6 +195,17 @@ function QualityPanel({ checks, healthyCount, staleCount }: { checks: QualityChe
           </div>
         ))}
       </div>
+      <div className="quality-key">
+        <span><CheckCircle2 size={13} className="ok" /> {lang === 'ms' ? 'lulus' : 'passed'}</span>
+        <span><AlertTriangle size={13} className="warn" /> {lang === 'ms' ? 'perlu perhatian' : 'needs attention'}</span>
+        <span>{lang === 'ms' ? '— tidak berkenaan' : '— not applicable'}</span>
+      </div>
+      {checks.filter((c) => c.stale && c.stale_note).map((c) => (
+        <div key={`note-${c.dataset_id}`} className="stale-warning">
+          <AlertTriangle size={14} />
+          <span><strong>{c.dataset_id}:</strong> {c.stale_note}</span>
+        </div>
+      ))}
     </div>
   )
 }
@@ -248,16 +276,17 @@ export function EvidenceMethodView({ sources, dataQuality, dataDictionary, dataA
           </h2>
           <p>{t('evidenceDesc')}</p>
           <div className="method-vintage">
-            <span>{lang === 'ms' ? 'Tempoh data:' : 'Data vintage:'}</span> <strong>{dataAsOf}</strong>
-            <span style={{ marginLeft: 16 }}>{lang === 'ms' ? 'Dijana:' : 'Generated:'}</span> <strong>{generatedAt}</strong>
+            <span>{lang === 'ms' ? 'Data setakat:' : 'Data current as of:'}</span> <strong>{dataAsOf}</strong>
+            <span style={{ marginLeft: 16 }}>{lang === 'ms' ? 'Papan pemuka dibina:' : 'Dashboard built:'}</span>{' '}
+            <strong>{formatBuiltAt(generatedAt, lang)}</strong>
           </div>
         </div>
         <div className="method-seal">
           <BookOpen size={26} />
           <span>
-            {lang === 'ms' ? 'Sumber' : 'Source'}
+            {lang === 'ms' ? 'Setiap angka' : 'Every figure'}
             <br />
-            <strong>{lang === 'ms' ? 'diaudit' : 'audited'}</strong>
+            <strong>{lang === 'ms' ? 'bersumber' : 'sourced'}</strong>
           </span>
         </div>
       </div>
@@ -273,12 +302,12 @@ export function EvidenceMethodView({ sources, dataQuality, dataDictionary, dataA
             onClick={() => setSubTab(sub)}
           >
             {sub === 'formula'
-              ? (lang === 'ms' ? 'Kontrak pemarkahan' : 'Scoring contract')
+              ? (lang === 'ms' ? 'Kontrak pemarkahan' : 'How the scores work')
               : sub === 'sources'
-              ? (lang === 'ms' ? 'Daftar sumber' : 'Source register')
+              ? (lang === 'ms' ? 'Daftar sumber' : 'Where the data comes from')
               : sub === 'quality'
               ? (lang === 'ms' ? 'Kualiti data' : 'Data quality')
-              : (lang === 'ms' ? 'Kamus data' : 'Data dictionary')}
+              : (lang === 'ms' ? 'Kamus data' : 'What each term means')}
           </button>
         ))}
       </div>
@@ -316,26 +345,26 @@ function FormulaPanel() {
           <span>{lang === 'ms' ? 'Indeks Tekanan (0–100)' : 'Pressure Index (0–100)'}</span>
           <strong>
             {lang === 'ms'
-              ? '50% ketumpatan pelawat + 30% momentum pertumbuhan + 20% inflasi IHP negeri'
-              : '50% visitor density + 30% visitor growth velocity + 20% state CPI inflation'}
+              ? '50% ketumpatan pelawat + 30% kadar pertumbuhan + 20% inflasi IHP negeri'
+              : '50% visitor density + 30% visitor growth rate + 20% state CPI inflation'}
           </strong>
           <small>
             {lang === 'ms'
-              ? 'Semua input ternormal min-max merentasi 16 negeri. Skor lebih tinggi = tekanan permintaan lebih kuat terhadap kapasiti tempatan.'
-              : 'All inputs min-max normalised across 16 states. Higher = greater demand pressure against local capacity.'}
+              ? 'Setiap input diskalakan semula supaya negeri terendah antara 16 ialah 0 dan tertinggi ialah 100, kemudian ketiga-tiganya digabungkan mengikut pemberat di atas.'
+              : 'Each input is rescaled so the lowest of the 16 states is 0 and the highest is 100, then the three are combined using the weights above.'}
           </small>
         </div>
         <div className="formula">
           <span>{lang === 'ms' ? 'Potensi Kemakmuran (0–100)' : 'Prosperity Potential (0–100)'}</span>
           <strong>
             {lang === 'ms'
-              ? '35% ketumpatan pelawat + 30% momentum pertumbuhan + 35% komposisi pelancong bermalam'
-              : '35% visitor density + 30% growth velocity + 35% overnight tourist mix'}
+              ? '35% ketumpatan pelawat + 30% kadar pertumbuhan + 35% bahagian yang bermalam'
+              : '35% visitor density + 30% growth rate + 35% share who stay overnight'}
           </strong>
           <small>
             {lang === 'ms'
-              ? 'Skor lebih tinggi = peluang lebih luas bagi penjanaan nilai pelancongan bermalam berimpak ekonomi tinggi.'
-              : 'Higher = greater opportunity for high-value overnight tourism capture.'}
+              ? 'Skor lebih tinggi bermakna lebih banyak ruang untuk menarik pelawat yang bermalam dan berbelanja lebih.'
+              : 'Higher means more room to attract visitors who stay overnight and spend more.'}
           </small>
         </div>
         <div className="formula">
@@ -347,29 +376,29 @@ function FormulaPanel() {
           </strong>
           <small>
             {lang === 'ms'
-              ? 'Model naif bermusim dikekalkan sebagai pembanding asas. Selang ramalan: 95%.'
-              : 'Seasonal naïve retained as baseline comparator. Prediction interval: 95%.'}
+              ? 'Model naif bermusim dikekalkan sebagai pembanding asas. Selang ramalan: 95%. Secara ringkas: kami mencuba tiga kaedah ramalan standard, menahan empat suku terakhir untuk mengujinya, dan mengekalkan yang paling hampir.'
+              : 'Seasonal naïve retained as baseline comparator. Prediction interval: 95%. In plain terms: we tried three standard forecasting methods, held back the last four quarters to test them, and kept the one that came closest.'}
           </small>
         </div>
         <div className="formula">
           <span>{lang === 'ms' ? 'Simulasi Intervensi' : 'Intervention Simulation'}</span>
           <strong>
             {lang === 'ms'
-              ? 'Model senario berarah — keanjalan telus dikenakan pada skor indeks'
-              : 'Directional scenario model — transparent elasticities applied to index scores'}
+              ? 'Model andaian ringkas — kadar tindak balas tetap yang diterbitkan, dikenakan pada skor'
+              : 'A simple what-if model — fixed, published response rates applied to the scores'}
           </strong>
           <small>
             {lang === 'ms'
-              ? 'Bukan model ekonometrik kausal muktamad. Dikelaskan sebagai anggaran senario penerokaan.'
-              : 'Not a causal econometric model. Labelled as a directional scenario estimate.'}
+              ? 'Bukan model kausal. Ia menunjukkan arah dan anggaran kasar sahaja.'
+              : 'Not a causal model. It shows direction and rough size only.'}
           </small>
         </div>
         <div className="method-caveat">
           <AlertTriangle size={17} />
           <p>
             {lang === 'ms'
-              ? 'Indeks saringan relatif sahaja. Skor tinggi adalah alasan berasaskan bukti untuk menyiasat dan melindungi, bukan sekatan daya tampung mutlak.'
-              : 'Relative screening indices only. A high score is an evidence-backed reason to investigate and safeguard, not an official carrying-capacity barrier.'}
+              ? 'Skor ini membandingkan 16 negeri antara satu sama lain. Ia bukan had rasmi, dan ia tidak membuktikan bahawa pelancongan menyebabkan sebarang perubahan ini.'
+              : 'These scores compare the 16 states against each other. They are not official limits, and they do not prove that tourism caused any of these changes.'}
           </p>
         </div>
       </div>
@@ -382,10 +411,10 @@ function FormulaPanel() {
         </div>
         <div className="quadrant-table">
           {[
-            { q: lang === 'ms' ? 'Urus pertumbuhan' : 'Manage growth', rule: 'Pressure ≥ 60 AND Prosperity ≥ 40', color: '#7c331d' },
-            { q: lang === 'ms' ? 'Kembangkan terpilih' : 'Grow selectively', rule: 'Pressure < 60 AND Prosperity ≥ 40', color: '#17554c' },
-            { q: lang === 'ms' ? 'Lindung nilai' : 'Protect value', rule: 'Pressure ≥ 60 AND Prosperity < 40', color: '#9c6114' },
-            { q: lang === 'ms' ? 'Bina kesiapsiagaan' : 'Build readiness', rule: 'Pressure < 60 AND Prosperity < 40', color: '#7a857e' },
+            { q: lang === 'ms' ? 'Urus pertumbuhan' : 'Manage growth', rule: lang === 'ms' ? 'Tekanan 60 ke atas, manfaat tempatan 40 ke atas' : 'Pressure 60 or more, and local benefit 40 or more', color: '#7c331d' },
+            { q: lang === 'ms' ? 'Kembangkan terpilih' : 'Grow selectively', rule: lang === 'ms' ? 'Tekanan bawah 60, manfaat tempatan 40 ke atas' : 'Pressure under 60, and local benefit 40 or more', color: '#17554c' },
+            { q: lang === 'ms' ? 'Lindung nilai' : 'Protect value', rule: lang === 'ms' ? 'Tekanan 60 ke atas, manfaat tempatan bawah 40' : 'Pressure 60 or more, and local benefit under 40', color: '#9c6114' },
+            { q: lang === 'ms' ? 'Bina kesiapsiagaan' : 'Build readiness', rule: lang === 'ms' ? 'Tekanan bawah 60, manfaat tempatan bawah 40' : 'Pressure under 60, and local benefit under 40', color: '#7a857e' },
           ].map((row) => (
             <div key={row.q} className="quadrant-row">
               <span className="quadrant-dot" style={{ background: row.color }} />

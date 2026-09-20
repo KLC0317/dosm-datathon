@@ -1,6 +1,6 @@
 {
   "generated_at": "2026-09-11T16:19:23+08:00",
-  "data_as_of": "Q1 2026 tourism / Sep 2026 CPI / 2026 population / latest OpenDOSM air pollution",
+  "data_as_of": "Q1 2026 tourism / Sep 2026 CPI / 2026 population / Dec 2022 OpenDOSM air quality",
   "sources": [
     {
       "dataset_id": "DTS-2025",
@@ -391,13 +391,13 @@
         "driver": "Quarterly seasonality",
         "direction": "stable",
         "contribution": 31.0,
-        "detail": "Model retains recurring Q1?Q4 demand pattern from DOSM history."
+        "detail": "Model retains recurring Q1–Q4 demand pattern from DOSM history."
       },
       {
         "driver": "Backtest uncertainty",
         "direction": "watch",
         "contribution": 6.4,
-        "detail": "Typical holdout error: ?1.6 million visitors."
+        "detail": "Typical holdout error: ±1.6 million visitors."
       }
     ],
     "training_cutoff": "2026-Q1",

@@ -10,8 +10,10 @@ export const metadata: Metadata = {
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  // The default UI language is English; LanguageProvider keeps this in sync
+  // when the switcher is used, so screen readers use the right pronunciation.
   return (
-    <html lang="ms">
+    <html lang="en">
       <body>{children}</body>
     </html>
   )
