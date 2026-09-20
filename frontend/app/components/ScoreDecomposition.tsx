@@ -2,6 +2,7 @@
 
 import { AlertTriangle, Info } from 'lucide-react'
 import { DataStatusBadge } from './DataStatusBadge'
+import { useLanguage } from '../lib/i18n'
 
 type ScoreInput = {
   input: string
@@ -28,36 +29,32 @@ type Props = {
 }
 
 export function ScoreDecomposition({ state, pressureDecomp, prosperityDecomp, sensitiveToWeights }: Props) {
+  const { t } = useLanguage()
+
   return (
     <div className="score-decomp-container">
       <div className="decomp-header">
-        <span className="eyebrow">Score decomposition</span>
-        <h3>Why {state} has these scores</h3>
+        <span className="eyebrow">{t('decompEyebrow')}</span>
+        <h3>{t('decompTitle')} {state}</h3>
         <p className="decomp-note">
-          Every figure below is traceable to an official DOSM source. These are relative screening indices, not
-          official carrying-capacity measurements.
+          {t('decompNote')}
         </p>
         {sensitiveToWeights && (
           <div className="sensitivity-warning">
             <AlertTriangle size={14} />
             <span>
-              <strong>Sensitive to assumptions</strong> — the quadrant classification could change if index weights
-              shift by ±10%. Inspect the contributions below.
+              {t('decompSensitivityWarning')}
             </span>
           </div>
         )}
       </div>
 
-      <DecompTable label="Pressure Index" inputs={pressureDecomp.inputs} total={pressureDecomp.stored_score} colorClass="pressure-color" />
-      <DecompTable label="Prosperity Potential Index" inputs={prosperityDecomp.inputs} total={prosperityDecomp.stored_score} colorClass="prosperity-color" />
+      <DecompTable label={t('decompPressureTable')} inputs={pressureDecomp.inputs} total={pressureDecomp.stored_score} colorClass="pressure-color" />
+      <DecompTable label={t('decompProsperityTable')} inputs={prosperityDecomp.inputs} total={prosperityDecomp.stored_score} colorClass="prosperity-color" />
 
       <div className="decomp-caveat">
         <Info size={14} />
-        <p>
-          Weights are: Pressure = 50% visitor density + 30% growth + 20% CPI. Prosperity = 35% density + 30%
-          growth + 35% overnight mix. All inputs normalised to 0–100 using min-max across all 16 states. Thresholds
-          are relative, not absolute carrying-capacity limits.
-        </p>
+        <p>{t('decompCaveatText')}</p>
       </div>
     </div>
   )
@@ -74,17 +71,19 @@ function DecompTable({
   total: number
   colorClass: string
 }) {
+  const { t } = useLanguage()
+
   return (
     <div className="decomp-table-block">
       <div className="decomp-table-title">{label}</div>
       <div className="decomp-table" role="table" aria-label={`${label} decomposition`}>
         <div className="decomp-row decomp-thead" role="row">
-          <span role="columnheader">Input</span>
-          <span role="columnheader">Raw value</span>
-          <span role="columnheader">Normalised (0–100)</span>
-          <span role="columnheader">Weight</span>
-          <span role="columnheader">Contribution</span>
-          <span role="columnheader">Source / period</span>
+          <span role="columnheader">{t('decompColInput')}</span>
+          <span role="columnheader">{t('decompColRaw')}</span>
+          <span role="columnheader">{t('decompColNorm')}</span>
+          <span role="columnheader">{t('decompColWeight')}</span>
+          <span role="columnheader">{t('decompColContrib')}</span>
+          <span role="columnheader">{t('decompColSource')}</span>
         </div>
         {inputs.map((inp) => (
           <div key={inp.input} className="decomp-row" role="row">
@@ -111,7 +110,7 @@ function DecompTable({
         ))}
         <div className="decomp-row decomp-total" role="row">
           <span role="cell" className="total-label">
-            Index total (stored score)
+            {t('decompTotalScore')}
           </span>
           <span role="cell" />
           <span role="cell" />

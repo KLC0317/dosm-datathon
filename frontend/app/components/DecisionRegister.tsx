@@ -2,6 +2,7 @@
 
 import { AlertTriangle, BadgeCheck, ChevronDown, ChevronRight, ChevronUp, ClipboardList, Clock, FileText, Plus } from 'lucide-react'
 import { useState } from 'react'
+import { useLanguage } from '../lib/i18n'
 
 export type Decision = {
   decision_id: string
@@ -28,17 +29,18 @@ export type Decision = {
   created_at: string
 }
 
-const STATUS_CFG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  draft: { label: 'Draft', color: '#7a857e', icon: <FileText size={13} /> },
-  reviewed: { label: 'Reviewed', color: '#9c6114', icon: <ClipboardList size={13} /> },
-  approved: { label: 'Approved', color: '#17554c', icon: <BadgeCheck size={13} /> },
-  rejected: { label: 'Rejected', color: '#7c331d', icon: <AlertTriangle size={13} /> },
-  superseded: { label: 'Superseded', color: '#7a857e', icon: <AlertTriangle size={13} /> },
+const STATUS_ICONS: Record<string, { color: string; icon: React.ReactNode }> = {
+  draft: { color: '#7a857e', icon: <FileText size={13} /> },
+  reviewed: { color: '#9c6114', icon: <ClipboardList size={13} /> },
+  approved: { color: '#17554c', icon: <BadgeCheck size={13} /> },
+  rejected: { color: '#7c331d', icon: <AlertTriangle size={13} /> },
+  superseded: { color: '#7a857e', icon: <AlertTriangle size={13} /> },
 }
 
 function DecisionCard({ decision }: { decision: Decision }) {
+  const { lang, translateStatus } = useLanguage()
   const [expanded, setExpanded] = useState(false)
-  const cfg = STATUS_CFG[decision.approval_status] ?? STATUS_CFG.draft
+  const cfg = STATUS_ICONS[decision.approval_status] ?? STATUS_ICONS.draft
 
   return (
     <div className={`decision-card status-${decision.approval_status}`}>
@@ -55,7 +57,7 @@ function DecisionCard({ decision }: { decision: Decision }) {
         </div>
         <div className="decision-header-right">
           <span className="decision-status" style={{ color: cfg.color }}>
-            {cfg.icon} {cfg.label}
+            {cfg.icon} {translateStatus(decision.approval_status)}
           </span>
           <span className="decision-date">
             <Clock size={12} /> {decision.created_at.slice(0, 10)}
@@ -67,57 +69,57 @@ function DecisionCard({ decision }: { decision: Decision }) {
       {expanded && (
         <div className="decision-body">
           <div className="decision-grid">
-            <DecField label="Destination" value={decision.destination} />
-            <DecField label="Baseline period" value={decision.baseline_period} />
-            <DecField label="Responsible owner" value={decision.responsible_owner} />
-            <DecField label="Reviewer" value={decision.reviewer} />
-            <DecField label="Budget" value={decision.budget} />
-            <DecField label="Outcome review date" value={decision.outcome_review_date} />
-            <DecField label="Evidence version" value={decision.evidence_version} />
-            <DecField label="Model version" value={decision.model_version} />
-            <DecField label="Implementation" value={`${decision.implementation_dates.start} → ${decision.implementation_dates.end}`} />
+            <DecField label={lang === 'ms' ? 'Destinasi' : 'Destination'} value={decision.destination} />
+            <DecField label={lang === 'ms' ? 'Tempoh asas' : 'Baseline period'} value={decision.baseline_period} />
+            <DecField label={lang === 'ms' ? 'Pegawai bertanggungjawab' : 'Responsible owner'} value={decision.responsible_owner} />
+            <DecField label={lang === 'ms' ? 'Penyemak' : 'Reviewer'} value={decision.reviewer} />
+            <DecField label={lang === 'ms' ? 'Peruntukan' : 'Budget'} value={decision.budget} />
+            <DecField label={lang === 'ms' ? 'Tarikh semakan hasil' : 'Outcome review date'} value={decision.outcome_review_date} />
+            <DecField label={lang === 'ms' ? 'Versi bukti' : 'Evidence version'} value={decision.evidence_version} />
+            <DecField label={lang === 'ms' ? 'Versi model' : 'Model version'} value={decision.model_version} />
+            <DecField label={lang === 'ms' ? 'Pelaksanaan' : 'Implementation'} value={`${decision.implementation_dates.start} → ${decision.implementation_dates.end}`} />
           </div>
 
-          <DecSection label="Selected option" value={decision.selected_option} />
-          <DecSection label="Reason for selection" value={decision.reason_for_selection} />
+          <DecSection label={lang === 'ms' ? 'Pilihan terpilih' : 'Selected option'} value={decision.selected_option} />
+          <DecSection label={lang === 'ms' ? 'Rasional pemilihan' : 'Reason for selection'} value={decision.reason_for_selection} />
 
           <div className="decision-list-section">
-            <span className="dec-label">Options considered</span>
+            <span className="dec-label">{lang === 'ms' ? 'Pilihan dipertimbangkan' : 'Options considered'}</span>
             <ul>{decision.options_considered.map((o, i) => <li key={i}>{o}</li>)}</ul>
           </div>
 
           <div className="decision-list-section">
-            <span className="dec-label">Evidence references</span>
+            <span className="dec-label">{lang === 'ms' ? 'Rujukan bukti' : 'Evidence references'}</span>
             <ul>{decision.evidence_references.map((r, i) => <li key={i}>{r}</li>)}</ul>
           </div>
 
           <div className="decision-list-section">
-            <span className="dec-label">Assumptions</span>
+            <span className="dec-label">{lang === 'ms' ? 'Andaian diguna pakai' : 'Assumptions'}</span>
             <ul>{decision.assumptions.map((a, i) => <li key={i}>{a}</li>)}</ul>
           </div>
 
           <div className="decision-list-section warning-list">
-            <span className="dec-label"><AlertTriangle size={13} /> Known limitations</span>
+            <span className="dec-label"><AlertTriangle size={13} /> {lang === 'ms' ? 'Kekangan & had diketahui' : 'Known limitations'}</span>
             <ul>{decision.known_limitations.map((l, i) => <li key={i}>{l}</li>)}</ul>
           </div>
 
           <div className="decision-list-section">
-            <span className="dec-label">Monitoring KPIs</span>
+            <span className="dec-label">{lang === 'ms' ? 'KPI pemantauan' : 'Monitoring KPIs'}</span>
             <ul>{decision.monitoring_kpis.map((k, i) => <li key={i}>{k}</li>)}</ul>
           </div>
 
-          {decision.decision_result && <DecSection label="Decision result" value={decision.decision_result} />}
-          {decision.revision_reason && <DecSection label="Revision reason" value={decision.revision_reason} isWarning />}
+          {decision.decision_result && <DecSection label={lang === 'ms' ? 'Hasil keputusan' : 'Decision result'} value={decision.decision_result} />}
+          {decision.revision_reason && <DecSection label={lang === 'ms' ? 'Sebab semakan semula' : 'Revision reason'} value={decision.revision_reason} isWarning />}
 
           <div className="decision-footer">
-            <span className="dec-label">Approval status</span>
+            <span className="dec-label">{lang === 'ms' ? 'Status kelulusan' : 'Approval status'}</span>
             <div className="status-stepper">
               {(['draft', 'reviewed', 'approved'] as const).map((s, i) => {
                 const reached = ['draft', 'reviewed', 'approved'].indexOf(decision.approval_status) >= i
                 return (
                   <div key={s} className={`stepper-step ${reached ? 'reached' : ''}`}>
                     <div className="stepper-dot" />
-                    <span>{STATUS_CFG[s].label}</span>
+                    <span>{translateStatus(s)}</span>
                     {i < 2 && <ChevronRight size={12} className="stepper-arrow" />}
                   </div>
                 )
@@ -149,6 +151,7 @@ function DecSection({ label, value, isWarning = false }: { label: string; value:
 }
 
 export function DecisionRegister({ decisions: initialDecisions }: { decisions: Decision[] }) {
+  const { lang, translateStatus } = useLanguage()
   const [decisions, setDecisions] = useState<Decision[]>(initialDecisions)
   const [filterStatus, setFilterStatus] = useState<string>('all')
 
@@ -158,30 +161,32 @@ export function DecisionRegister({ decisions: initialDecisions }: { decisions: D
     <div className="decision-view">
       <div className="decision-hero">
         <div>
-          <p className="kicker">ASSURANCE &amp; DECISION REGISTER</p>
+          <p className="kicker">{lang === 'ms' ? 'JEJAK TADBIR URUS & DAFTAR KEPUTUSAN' : 'ASSURANCE & DECISION REGISTER'}</p>
           <h2>
-            What was reviewed,
+            {lang === 'ms' ? 'Perkara yang disemak,' : 'What was reviewed,'}
             <br />
-            <em>decided, and monitored?</em>
+            <em>{lang === 'ms' ? 'diputuskan, dan dipantau?' : 'decided, and monitored?'}</em>
           </h2>
           <p>
-            A demonstrative decision register for the competition prototype. In operational deployment this would be
-            persistent, permission-controlled, versioned, and auditable.
+            {lang === 'ms'
+              ? 'Daftar keputusan demonstratif untuk prototaip pertandingan. Dalam pelaksanaan operasi sebenar, rekod ini disimpan secara berpusat, dikawal capaian, mempunyai kawalan versi dan jejak audit penuh.'
+              : 'A demonstrative decision register for the competition prototype. In operational deployment this would be persistent, permission-controlled, versioned, and auditable.'}
           </p>
           <div className="policy-disclaimer">
             <AlertTriangle size={14} />
             <span>
-              These are example decision records created for demonstration. AI-generated content requires human
-              review before entering an approved decision record.
+              {lang === 'ms'
+                ? 'Ini adalah rekod keputusan contoh bagi tujuan demonstrasi. Sebarang cadangan janaan AI memerlukan semakan pegawai manusia sebelum direkodkan sebagai keputusan rasmi.'
+                : 'These are example decision records created for demonstration. AI-generated content requires human review before entering an approved decision record.'}
             </span>
           </div>
         </div>
         <div className="policy-seal">
           <ClipboardList size={26} />
           <span>
-            Decision
+            {lang === 'ms' ? 'Daftar' : 'Decision'}
             <br />
-            <strong>register</strong>
+            <strong>{lang === 'ms' ? 'keputusan' : 'register'}</strong>
           </span>
         </div>
       </div>
@@ -195,7 +200,9 @@ export function DecisionRegister({ decisions: initialDecisions }: { decisions: D
               className={filterStatus === s ? 'active' : ''}
               onClick={() => setFilterStatus(s)}
             >
-              {s === 'all' ? `All (${decisions.length})` : `${STATUS_CFG[s]?.label ?? s} (${decisions.filter((d) => d.approval_status === s).length})`}
+              {s === 'all'
+                ? `${lang === 'ms' ? 'Semua' : 'All'} (${decisions.length})`
+                : `${translateStatus(s)} (${decisions.filter((d) => d.approval_status === s).length})`}
             </button>
           ))}
         </div>
@@ -205,20 +212,20 @@ export function DecisionRegister({ decisions: initialDecisions }: { decisions: D
           onClick={() => {
             const newDec: Decision = {
               decision_id: `DEC-2026-${String(decisions.length + 1).padStart(3, '0')}`,
-              decision_question: 'New decision — edit this field',
-              destination: 'Select destination',
+              decision_question: lang === 'ms' ? 'Keputusan baru — sila sunting ruangan ini' : 'New decision — edit this field',
+              destination: lang === 'ms' ? 'Pilih destinasi' : 'Select destination',
               baseline_period: 'Q1 2026',
-              options_considered: ['Option 0: Maintain current policy'],
-              selected_option: 'To be determined',
-              reason_for_selection: 'Evidence review in progress.',
+              options_considered: [lang === 'ms' ? 'Pilihan 0: Kekalkan dasar sedia ada' : 'Option 0: Maintain current policy'],
+              selected_option: lang === 'ms' ? 'Untuk ditentukan' : 'To be determined',
+              reason_for_selection: lang === 'ms' ? 'Semakan bukti sedang berjalan.' : 'Evidence review in progress.',
               evidence_references: [],
               evidence_version: 'dashboard_data.json (current)',
               model_version: 'Pressure Index v1.0',
               assumptions: [],
               known_limitations: [],
-              budget: 'To be determined',
-              responsible_owner: 'To be assigned',
-              reviewer: 'To be assigned',
+              budget: lang === 'ms' ? 'Untuk ditentukan' : 'To be determined',
+              responsible_owner: lang === 'ms' ? 'Untuk diagihkan' : 'To be assigned',
+              reviewer: lang === 'ms' ? 'Untuk diagihkan' : 'To be assigned',
               approval_status: 'draft',
               implementation_dates: { start: '—', end: '—' },
               monitoring_kpis: [],
@@ -230,13 +237,17 @@ export function DecisionRegister({ decisions: initialDecisions }: { decisions: D
             setDecisions([newDec, ...decisions])
           }}
         >
-          <Plus size={15} /> Add decision
+          <Plus size={15} /> {lang === 'ms' ? 'Tambah keputusan' : 'Add decision'}
         </button>
       </div>
 
       <div className="decision-list">
         {filtered.length === 0 && (
-          <div className="decision-empty">No decision records match the selected filter.</div>
+          <div className="decision-empty">
+            {lang === 'ms'
+              ? 'Tiada rekod keputusan sepadan dengan tapisan yang dipilih.'
+              : 'No decision records match the selected filter.'}
+          </div>
         )}
         {filtered.map((d) => (
           <DecisionCard key={d.decision_id} decision={d} />
@@ -246,8 +257,9 @@ export function DecisionRegister({ decisions: initialDecisions }: { decisions: D
       <div className="decision-register-note">
         <AlertTriangle size={14} />
         <span>
-          For operational deployment: decisions must be stored in a persistent, permission-controlled, versioned
-          system with a full audit trail. This prototype stores decisions in-memory only.
+          {lang === 'ms'
+            ? 'Untuk pelaksanaan operasi: keputusan mesti disimpan dalam sistem berterusan, dikawal kebenaran, dan berversi dengan jejak audit penuh. Prototaip ini menyimpan keputusan dalam memori sahaja.'
+            : 'For operational deployment: decisions must be stored in a persistent, permission-controlled, versioned system with a full audit trail. This prototype stores decisions in-memory only.'}
         </span>
       </div>
     </div>

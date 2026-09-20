@@ -3,6 +3,7 @@
 import { AlertTriangle, BadgeCheck, ChevronDown, ChevronUp, Clock, FileText, Shield, TrendingUp, Users } from 'lucide-react'
 import { useState } from 'react'
 import { DataStatusBadge } from './DataStatusBadge'
+import { useLanguage } from '../lib/i18n'
 
 type PolicyOption = {
   option_id: string
@@ -48,14 +49,15 @@ const TYPE_COLOR: Record<string, string> = {
   combined: '#7c331d',
 }
 
-const APPROVAL_CONFIG: Record<string, { label: string; cls: string }> = {
-  draft: { label: 'Draft', cls: 'status-draft' },
-  reviewed: { label: 'Reviewed', cls: 'status-reviewed' },
-  approved: { label: 'Approved', cls: 'status-approved' },
-  rejected: { label: 'Rejected', cls: 'status-rejected' },
+const APPROVAL_CONFIG: Record<string, { cls: string }> = {
+  draft: { cls: 'status-draft' },
+  reviewed: { cls: 'status-reviewed' },
+  approved: { cls: 'status-approved' },
+  rejected: { cls: 'status-rejected' },
 }
 
 function OptionCard({ option, isExpanded, onToggle }: { option: PolicyOption; isExpanded: boolean; onToggle: () => void }) {
+  const { t, lang, translateStatus } = useLanguage()
   const acfg = APPROVAL_CONFIG[option.approval_status] ?? APPROVAL_CONFIG.draft
   const color = TYPE_COLOR[option.type] ?? '#17554c'
 
@@ -72,7 +74,7 @@ function OptionCard({ option, isExpanded, onToggle }: { option: PolicyOption; is
         id={`opt-${option.option_id}`}
       >
         <div className="option-header-left">
-          <span className="option-number">Option {option.option_number}</span>
+          <span className="option-number">{lang === 'ms' ? 'Pilihan' : 'Option'} {option.option_number}</span>
           <span className="option-icon" style={{ color }}>{TYPE_ICON[option.type]}</span>
           <div>
             <strong className="option-label">{option.label}</strong>
@@ -80,7 +82,7 @@ function OptionCard({ option, isExpanded, onToggle }: { option: PolicyOption; is
           </div>
         </div>
         <div className="option-header-right">
-          <span className={`approval-badge ${acfg.cls}`}>{acfg.label}</span>
+          <span className={`approval-badge ${acfg.cls}`}>{translateStatus(option.approval_status)}</span>
           <span className="option-budget">{option.estimated_budget}</span>
           {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
         </div>
@@ -89,21 +91,21 @@ function OptionCard({ option, isExpanded, onToggle }: { option: PolicyOption; is
       {isExpanded && (
         <div className="option-body" aria-labelledby={`opt-${option.option_id}`}>
           <div className="option-grid">
-            <OptionField label="Target destination" value={option.target_destination} />
-            <OptionField label="Target population" value={option.target_population} />
-            <OptionField label="Responsible organisation" value={option.responsible_organisation} />
-            <OptionField label="Implementation period" value={option.implementation_period} />
-            <OptionField label="Estimated budget" value={option.estimated_budget} />
-            <OptionField label="Review date" value={option.review_date} icon={<Clock size={13} />} />
+            <OptionField label={t('targetDest')} value={option.target_destination} />
+            <OptionField label={t('targetPop')} value={option.target_population} />
+            <OptionField label={t('leadAgency')} value={option.responsible_organisation} />
+            <OptionField label={t('implPeriod')} value={option.implementation_period} />
+            <OptionField label={t('budgetEst')} value={option.estimated_budget} />
+            <OptionField label={lang === 'ms' ? 'Tarikh semakan' : 'Review date'} value={option.review_date} icon={<Clock size={13} />} />
           </div>
 
-          <OptionSection label="Intervention description" value={option.intervention_description} />
-          <OptionSection label="Evidence supporting" value={option.evidence_supporting} status="observed" />
-          <OptionSection label="Evidence gaps" value={option.evidence_gaps} status="unavailable" isWarning />
-          <OptionSection label="Expected output" value={option.expected_output} />
-          <OptionSection label="Intended outcome" value={option.intended_outcome} />
-          <OptionSection label="Risk and mitigation" value={option.risk_mitigation} isWarning />
-          <OptionSection label="Monitoring KPI" value={option.monitoring_kpi} icon={<TrendingUp size={13} />} />
+          <OptionSection label={lang === 'ms' ? 'Keterangan intervensi' : 'Intervention description'} value={option.intervention_description} />
+          <OptionSection label={t('evidenceSupport')} value={option.evidence_supporting} status="observed" />
+          <OptionSection label={lang === 'ms' ? 'Jurang data / bukti' : 'Evidence gaps'} value={option.evidence_gaps} status="unavailable" isWarning />
+          <OptionSection label={t('expectedOutput')} value={option.expected_output} />
+          <OptionSection label={t('intendedOutcome')} value={option.intended_outcome} />
+          <OptionSection label={t('riskMitigation')} value={option.risk_mitigation} isWarning />
+          <OptionSection label={t('monitoringKpi')} value={option.monitoring_kpi} icon={<TrendingUp size={13} />} />
         </div>
       )}
     </div>
@@ -146,16 +148,17 @@ function OptionSection({
 }
 
 function TheoryOfChange({ option }: { option: PolicyOption }) {
+  const { lang, t } = useLanguage()
   const steps: TheoryStep[] = [
-    { label: 'Problem identified', icon: <AlertTriangle size={14} />, color: '#7c331d' },
+    { label: lang === 'ms' ? 'Isu dikenal pasti' : 'Problem identified', icon: <AlertTriangle size={14} />, color: '#7c331d' },
     { label: option.intervention_description.split('.')[0] + '.', icon: <Shield size={14} />, color: '#9c6114' },
     { label: option.expected_output, icon: <BadgeCheck size={14} />, color: '#33887c' },
     { label: option.intended_outcome, icon: <TrendingUp size={14} />, color: '#17554c' },
-    { label: 'Long-term local value', icon: <Users size={14} />, color: '#0f3f39' },
+    { label: lang === 'ms' ? 'Nilai tempatan jangka panjang' : 'Long-term local value', icon: <Users size={14} />, color: '#0f3f39' },
   ]
   return (
     <div className="theory-of-change">
-      <div className="toc-label">Theory of change</div>
+      <div className="toc-label">{t('tocTitle')}</div>
       <div className="toc-chain">
         {steps.map((step, i) => (
           <div key={i} className="toc-step">
@@ -164,7 +167,7 @@ function TheoryOfChange({ option }: { option: PolicyOption }) {
             {i < steps.length - 1 && (
               <div className="toc-arrow">
                 <span>→</span>
-                <small>assumption</small>
+                <small>{lang === 'ms' ? 'andaian' : 'assumption'}</small>
               </div>
             )}
           </div>
@@ -181,6 +184,7 @@ export function PolicyOptionsView({
   stateName: string
   options: PolicyOption[]
 }) {
+  const { lang, t } = useLanguage()
   const [expandedId, setExpandedId] = useState<string | null>(options[0]?.option_id ?? null)
   const [tocOption, setTocOption] = useState<number>(1)
 
@@ -190,30 +194,24 @@ export function PolicyOptionsView({
     <div className="policy-view">
       <div className="policy-hero">
         <div>
-          <p className="kicker">POLICY OPTIONS WORKSPACE</p>
+          <p className="kicker">{lang === 'ms' ? 'RUANG KERJA PILIHAN DASAR' : 'POLICY OPTIONS WORKSPACE'}</p>
           <h2>
-            What choices are available
+            {lang === 'ms' ? 'Pilihan intervensi sedia ada' : 'What choices are available'}
             <br />
-            <em>for {stateName}?</em>
+            <em>{lang === 'ms' ? `untuk ${stateName}?` : `for ${stateName}?`}</em>
           </h2>
-          <p>
-            Five structured options for government consideration. Each shows evidence, evidence gaps, responsible
-            organisation, costs, and monitoring plan. Option 0 is always the maintain-current-policy baseline.
-          </p>
+          <p>{t('policyOptionsDesc')}</p>
           <div className="policy-disclaimer">
             <AlertTriangle size={14} />
-            <span>
-              These options are for planning purposes. AI-generated recommendations require human review before
-              entering a decision record. No option is automatically approved policy.
-            </span>
+            <span>{t('policyDisclaimer')}</span>
           </div>
         </div>
         <div className="policy-seal">
           <Shield size={26} />
           <span>
-            Evidence
+            {lang === 'ms' ? 'Berasaskan' : 'Evidence'}
             <br />
-            <strong>grounded</strong>
+            <strong>{lang === 'ms' ? 'bukti DOSM' : 'grounded'}</strong>
           </span>
         </div>
       </div>
@@ -233,8 +231,8 @@ export function PolicyOptionsView({
       <div className="toc-section panel">
         <div className="panel-heading">
           <div>
-            <span className="eyebrow">Theory of change</span>
-            <h2>From problem to value</h2>
+            <span className="eyebrow">{t('tocTitle')}</span>
+            <h2>{lang === 'ms' ? 'Daripada Masalah ke Kemakmuran' : 'From problem to value'}</h2>
           </div>
           <div className="toc-option-selector">
             {options.filter((o) => o.type !== 'baseline').map((o) => (
@@ -244,15 +242,16 @@ export function PolicyOptionsView({
                 className={tocOption === o.option_number ? 'active' : ''}
                 onClick={() => setTocOption(o.option_number)}
               >
-                Option {o.option_number}
+                {lang === 'ms' ? 'Pilihan' : 'Option'} {o.option_number}
               </button>
             ))}
           </div>
         </div>
         {activeOption && <TheoryOfChange option={activeOption} />}
         <p className="toc-caveat">
-          Every arrow represents an assumption. Assumptions should be reviewed and, where possible, supported by
-          evidence before a decision is approved.
+          {lang === 'ms'
+            ? 'Setiap anak panah mewakili andaian. Andaian wajar disemak dan disokong oleh bukti data sebelum keputusan diluluskan secara rasmi.'
+            : 'Every arrow represents an assumption. Assumptions should be reviewed and supported by evidence before a decision is approved.'}
         </p>
       </div>
     </div>

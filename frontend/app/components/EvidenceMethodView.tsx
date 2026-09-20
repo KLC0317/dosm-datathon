@@ -2,6 +2,7 @@
 
 import { AlertTriangle, BookOpen, CheckCircle2, ChevronDown, ChevronUp, ExternalLink, XCircle } from 'lucide-react'
 import { useState } from 'react'
+import { useLanguage } from '../lib/i18n'
 
 type Source = {
   dataset_id: string
@@ -60,6 +61,7 @@ type Props = {
 }
 
 function SourceCard({ source, quality }: { source: Source; quality?: QualityCheck }) {
+  const { lang } = useLanguage()
   const [open, setOpen] = useState(false)
   const isStale = quality?.stale ?? false
 
@@ -98,21 +100,21 @@ function SourceCard({ source, quality }: { source: Source; quality?: QualityChec
             </div>
           )}
           <div className="source-detail-grid">
-            <SourceField label="Licence" value={source.licence} />
-            <SourceField label="Publication date" value={source.publication_date} />
-            <SourceField label="Extraction date" value={source.extraction_date} />
-            <SourceField label="Update frequency" value={source.update_frequency} />
-            <SourceField label="Geographic coverage" value={source.geographic_coverage} />
-            <SourceField label="Unit of measure" value={source.unit_of_measure} />
-            <SourceField label="Revision status" value={source.revision_status} />
-            <SourceField label="Pipeline version" value={source.pipeline_version} />
-            <SourceField label="Contact" value={source.contact} />
+            <SourceField label={lang === 'ms' ? 'Lesen data' : 'Licence'} value={source.licence} />
+            <SourceField label={lang === 'ms' ? 'Tarikh penerbitan' : 'Publication date'} value={source.publication_date} />
+            <SourceField label={lang === 'ms' ? 'Tarikh pengekstrakan' : 'Extraction date'} value={source.extraction_date} />
+            <SourceField label={lang === 'ms' ? 'Kekerapan kemaskini' : 'Update frequency'} value={source.update_frequency} />
+            <SourceField label={lang === 'ms' ? 'Liputan geografi' : 'Geographic coverage'} value={source.geographic_coverage} />
+            <SourceField label={lang === 'ms' ? 'Unit ukuran' : 'Unit of measure'} value={source.unit_of_measure} />
+            <SourceField label={lang === 'ms' ? 'Status semakan' : 'Revision status'} value={source.revision_status} />
+            <SourceField label={lang === 'ms' ? 'Versi saluran paip' : 'Pipeline version'} value={source.pipeline_version} />
+            <SourceField label={lang === 'ms' ? 'Penyelaras' : 'Contact'} value={source.contact} />
           </div>
-          <SourceField label="Definitions" value={source.definitions} wide />
-          <SourceField label="Quality checks applied" value={source.quality_checks} wide />
-          <SourceField label="Known gaps and limitations" value={source.known_gaps} wide isWarning />
+          <SourceField label={lang === 'ms' ? 'Definisi operasi' : 'Definitions'} value={source.definitions} wide />
+          <SourceField label={lang === 'ms' ? 'Semakan kualiti dikenakan' : 'Quality checks applied'} value={source.quality_checks} wide />
+          <SourceField label={lang === 'ms' ? 'Kekangan & jurang diketahui' : 'Known gaps and limitations'} value={source.known_gaps} wide isWarning />
           <a className="source-url-link" href={source.url} target="_blank" rel="noreferrer">
-            <ExternalLink size={14} /> Open official source
+            <ExternalLink size={14} /> {lang === 'ms' ? 'Buka sumber rasmi DOSM' : 'Open official source'}
           </a>
         </div>
       )}
@@ -140,27 +142,29 @@ function SourceField({
 }
 
 function QualityPanel({ checks, healthyCount, staleCount }: { checks: QualityCheck[]; healthyCount: number; staleCount: number }) {
+  const { lang } = useLanguage()
+
   return (
     <div className="quality-panel panel">
       <div className="panel-heading">
         <div>
-          <span className="eyebrow">Data quality</span>
-          <h2>Source health checks</h2>
+          <span className="eyebrow">{lang === 'ms' ? 'Kualiti data' : 'Data quality'}</span>
+          <h2>{lang === 'ms' ? 'Pemeriksaan kesihatan sumber' : 'Source health checks'}</h2>
         </div>
         <span className={`quality-summary-badge ${staleCount > 0 ? 'has-issues' : 'all-ok'}`}>
-          {healthyCount}/{healthyCount + staleCount} sources healthy
-          {staleCount > 0 && ` · ${staleCount} stale`}
+          {healthyCount}/{healthyCount + staleCount} {lang === 'ms' ? 'sumber sihat' : 'sources healthy'}
+          {staleCount > 0 && ` · ${staleCount} ${lang === 'ms' ? 'lapuk' : 'stale'}`}
         </span>
       </div>
       <div className="quality-table">
         <div className="quality-thead">
-          <span>Dataset</span>
-          <span>Fields</span>
-          <span>Types</span>
-          <span>Totals</span>
-          <span>Duplicates</span>
-          <span>Stale</span>
-          <span>Last refresh</span>
+          <span>{lang === 'ms' ? 'Set Data' : 'Dataset'}</span>
+          <span>{lang === 'ms' ? 'Medan' : 'Fields'}</span>
+          <span>{lang === 'ms' ? 'Jenis' : 'Types'}</span>
+          <span>{lang === 'ms' ? 'Jumlah' : 'Totals'}</span>
+          <span>{lang === 'ms' ? 'Duplikasi' : 'Duplicates'}</span>
+          <span>{lang === 'ms' ? 'Lapuk' : 'Stale'}</span>
+          <span>{lang === 'ms' ? 'Kemaskini' : 'Last refresh'}</span>
         </div>
         {checks.map((c) => (
           <div key={c.dataset_id} className={`quality-row ${c.stale ? 'stale-row' : ''}`}>
@@ -179,6 +183,7 @@ function QualityPanel({ checks, healthyCount, staleCount }: { checks: QualityChe
 }
 
 function DataDictionaryPanel({ entries }: { entries: DictEntry[] }) {
+  const { lang, t } = useLanguage()
   const [search, setSearch] = useState('')
   const filtered = entries.filter(
     (e) =>
@@ -189,14 +194,14 @@ function DataDictionaryPanel({ entries }: { entries: DictEntry[] }) {
     <div className="dict-panel panel">
       <div className="panel-heading">
         <div>
-          <span className="eyebrow">Data dictionary</span>
-          <h2>All metrics defined</h2>
+          <span className="eyebrow">{lang === 'ms' ? 'Kamus data' : 'Data dictionary'}</span>
+          <h2>{lang === 'ms' ? 'Semua metrik ditakrifkan' : 'All metrics defined'}</h2>
         </div>
-        <span className="pill">{entries.length} metrics</span>
+        <span className="pill">{entries.length} {lang === 'ms' ? 'metrik' : 'metrics'}</span>
       </div>
       <input
         className="dict-search"
-        placeholder="Search metrics…"
+        placeholder={t('dictSearchPlaceholder')}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         aria-label="Search data dictionary"
@@ -211,60 +216,69 @@ function DataDictionaryPanel({ entries }: { entries: DictEntry[] }) {
             </div>
             <p>{entry.definition}</p>
             <div className="dict-meta">
-              <span>Geography: {entry.geography}</span>
-              <span>Period: {entry.period}</span>
-              <span>Source: {entry.source_id}</span>
+              <span>{lang === 'ms' ? 'Geografi' : 'Geography'}: {entry.geography}</span>
+              <span>{lang === 'ms' ? 'Tempoh' : 'Period'}: {entry.period}</span>
+              <span>{lang === 'ms' ? 'Sumber' : 'Source'}: {entry.source_id}</span>
             </div>
           </div>
         ))}
-        {filtered.length === 0 && <p className="dict-empty">No metrics match your search.</p>}
+        {filtered.length === 0 && (
+          <p className="dict-empty">
+            {lang === 'ms' ? 'Tiada metrik sepadan dengan carian anda.' : 'No metrics match your search.'}
+          </p>
+        )}
       </div>
     </div>
   )
 }
 
 export function EvidenceMethodView({ sources, dataQuality, dataDictionary, dataAsOf, generatedAt }: Props) {
+  const { lang, t } = useLanguage()
   const [subTab, setSubTab] = useState<'sources' | 'quality' | 'dict' | 'formula'>('formula')
 
   return (
     <div className="method-view">
       <div className="method-hero">
         <div>
-          <p className="kicker">EVIDENCE &amp; METHOD</p>
+          <p className="kicker">{lang === 'ms' ? 'BUKTI & METODOLOGI' : 'EVIDENCE & METHOD'}</p>
           <h2>
-            Every signal has a<br />
-            <em>source and an audit trail.</em>
+            {lang === 'ms' ? 'Setiap isyarat mempunyai' : 'Every signal has a'}
+            <br />
+            <em>{lang === 'ms' ? 'sumber dan jejak audit.' : 'source and an audit trail.'}</em>
           </h2>
-          <p>
-            Designed for public-sector review: inspect raw inputs, verify transformation logic, and export
-            transparent reasoning behind any recommended action.
-          </p>
+          <p>{t('evidenceDesc')}</p>
           <div className="method-vintage">
-            <span>Data vintage:</span> <strong>{dataAsOf}</strong>
-            <span style={{ marginLeft: 16 }}>Generated:</span> <strong>{generatedAt}</strong>
+            <span>{lang === 'ms' ? 'Tempoh data:' : 'Data vintage:'}</span> <strong>{dataAsOf}</strong>
+            <span style={{ marginLeft: 16 }}>{lang === 'ms' ? 'Dijana:' : 'Generated:'}</span> <strong>{generatedAt}</strong>
           </div>
         </div>
         <div className="method-seal">
           <BookOpen size={26} />
           <span>
-            Source
+            {lang === 'ms' ? 'Sumber' : 'Source'}
             <br />
-            <strong>audited</strong>
+            <strong>{lang === 'ms' ? 'diaudit' : 'audited'}</strong>
           </span>
         </div>
       </div>
 
       <div className="method-subtabs" role="tablist" aria-label="Evidence sections">
-        {(['formula', 'sources', 'quality', 'dict'] as const).map((t) => (
+        {(['formula', 'sources', 'quality', 'dict'] as const).map((sub) => (
           <button
-            key={t}
+            key={sub}
             type="button"
             role="tab"
-            aria-selected={subTab === t}
-            className={subTab === t ? 'active' : ''}
-            onClick={() => setSubTab(t)}
+            aria-selected={subTab === sub}
+            className={subTab === sub ? 'active' : ''}
+            onClick={() => setSubTab(sub)}
           >
-            {t === 'formula' ? 'Scoring contract' : t === 'sources' ? 'Source register' : t === 'quality' ? 'Data quality' : 'Data dictionary'}
+            {sub === 'formula'
+              ? (lang === 'ms' ? 'Kontrak pemarkahan' : 'Scoring contract')
+              : sub === 'sources'
+              ? (lang === 'ms' ? 'Daftar sumber' : 'Source register')
+              : sub === 'quality'
+              ? (lang === 'ms' ? 'Kualiti data' : 'Data quality')
+              : (lang === 'ms' ? 'Kamus data' : 'Data dictionary')}
           </button>
         ))}
       </div>
@@ -287,63 +301,91 @@ export function EvidenceMethodView({ sources, dataQuality, dataDictionary, dataA
 }
 
 function FormulaPanel() {
+  const { lang } = useLanguage()
+
   return (
     <div className="method-grid">
       <div className="panel formula-panel">
         <div className="panel-heading">
           <div>
-            <span className="eyebrow">Scoring contract</span>
-            <h2>How the screening signals are built</h2>
+            <span className="eyebrow">{lang === 'ms' ? 'Kontrak pemarkahan' : 'Scoring contract'}</span>
+            <h2>{lang === 'ms' ? 'Bagaimana isyarat saringan dibina' : 'How the screening signals are built'}</h2>
           </div>
         </div>
         <div className="formula">
-          <span>Pressure Index (0–100)</span>
-          <strong>50% visitor density + 30% visitor growth velocity + 20% state CPI inflation</strong>
-          <small>All inputs min-max normalised across 16 states. Higher = greater demand pressure against local capacity.</small>
+          <span>{lang === 'ms' ? 'Indeks Tekanan (0–100)' : 'Pressure Index (0–100)'}</span>
+          <strong>
+            {lang === 'ms'
+              ? '50% ketumpatan pelawat + 30% momentum pertumbuhan + 20% inflasi IHP negeri'
+              : '50% visitor density + 30% visitor growth velocity + 20% state CPI inflation'}
+          </strong>
+          <small>
+            {lang === 'ms'
+              ? 'Semua input ternormal min-max merentasi 16 negeri. Skor lebih tinggi = tekanan permintaan lebih kuat terhadap kapasiti tempatan.'
+              : 'All inputs min-max normalised across 16 states. Higher = greater demand pressure against local capacity.'}
+          </small>
         </div>
         <div className="formula">
-          <span>Prosperity Potential (0–100)</span>
-          <strong>35% visitor density + 30% growth velocity + 35% overnight tourist mix</strong>
-          <small>Higher = greater opportunity for high-value overnight tourism capture.</small>
+          <span>{lang === 'ms' ? 'Potensi Kemakmuran (0–100)' : 'Prosperity Potential (0–100)'}</span>
+          <strong>
+            {lang === 'ms'
+              ? '35% ketumpatan pelawat + 30% momentum pertumbuhan + 35% komposisi pelancong bermalam'
+              : '35% visitor density + 30% growth velocity + 35% overnight tourist mix'}
+          </strong>
+          <small>
+            {lang === 'ms'
+              ? 'Skor lebih tinggi = peluang lebih luas bagi penjanaan nilai pelancongan bermalam berimpak ekonomi tinggi.'
+              : 'Higher = greater opportunity for high-value overnight tourism capture.'}
+          </small>
         </div>
         <div className="formula">
-          <span>Demand Forecasting</span>
-          <strong>Ensemble: Damped ETS + AutoReg, chosen by 4-quarter holdout RMSE</strong>
-          <small>Seasonal naïve retained as baseline comparator. Prediction interval: 95%.</small>
+          <span>{lang === 'ms' ? 'Unjuran Permintaan' : 'Demand Forecasting'}</span>
+          <strong>
+            {lang === 'ms'
+              ? 'Ensembel: Damped ETS + AutoReg, dipilih mengikut RMSE tahan 4-suku tahun'
+              : 'Ensemble: Damped ETS + AutoReg, chosen by 4-quarter holdout RMSE'}
+          </strong>
+          <small>
+            {lang === 'ms'
+              ? 'Model naif bermusim dikekalkan sebagai pembanding asas. Selang ramalan: 95%.'
+              : 'Seasonal naïve retained as baseline comparator. Prediction interval: 95%.'}
+          </small>
         </div>
         <div className="formula">
-          <span>Intervention Simulation</span>
-          <strong>Directional scenario model — transparent elasticities applied to index scores</strong>
-          <small>Not a causal econometric model. Labelled as a directional scenario estimate.</small>
+          <span>{lang === 'ms' ? 'Simulasi Intervensi' : 'Intervention Simulation'}</span>
+          <strong>
+            {lang === 'ms'
+              ? 'Model senario berarah — keanjalan telus dikenakan pada skor indeks'
+              : 'Directional scenario model — transparent elasticities applied to index scores'}
+          </strong>
+          <small>
+            {lang === 'ms'
+              ? 'Bukan model ekonometrik kausal muktamad. Dikelaskan sebagai anggaran senario penerokaan.'
+              : 'Not a causal econometric model. Labelled as a directional scenario estimate.'}
+          </small>
         </div>
         <div className="method-caveat">
           <AlertTriangle size={17} />
           <p>
-            Relative screening indices only. A high score is an evidence-backed reason to investigate and
-            safeguard, not an official carrying-capacity barrier or a causal impact estimate.
-          </p>
-        </div>
-        <div className="method-caveat" style={{ borderColor: '#7c331d' }}>
-          <AlertTriangle size={17} />
-          <p>
-            A demand forecast estimates future visitor demand. It does not estimate the causal effect of a policy
-            intervention.
+            {lang === 'ms'
+              ? 'Indeks saringan relatif sahaja. Skor tinggi adalah alasan berasaskan bukti untuk menyiasat dan melindungi, bukan sekatan daya tampung mutlak.'
+              : 'Relative screening indices only. A high score is an evidence-backed reason to investigate and safeguard, not an official carrying-capacity barrier.'}
           </p>
         </div>
       </div>
       <div className="panel formula-panel">
         <div className="panel-heading">
           <div>
-            <span className="eyebrow">Quadrant classification</span>
-            <h2>How postures are assigned</h2>
+            <span className="eyebrow">{lang === 'ms' ? 'Klasifikasi kuadran' : 'Quadrant classification'}</span>
+            <h2>{lang === 'ms' ? 'Bagaimana postur diagihkan' : 'How postures are assigned'}</h2>
           </div>
         </div>
         <div className="quadrant-table">
           {[
-            { q: 'Manage growth', rule: 'Pressure ≥ 60 AND Prosperity ≥ 40', color: '#7c331d' },
-            { q: 'Grow selectively', rule: 'Pressure < 60 AND Prosperity ≥ 40', color: '#17554c' },
-            { q: 'Protect value', rule: 'Pressure ≥ 60 AND Prosperity < 40', color: '#9c6114' },
-            { q: 'Build readiness', rule: 'Pressure < 60 AND Prosperity < 40', color: '#7a857e' },
+            { q: lang === 'ms' ? 'Urus pertumbuhan' : 'Manage growth', rule: 'Pressure ≥ 60 AND Prosperity ≥ 40', color: '#7c331d' },
+            { q: lang === 'ms' ? 'Kembangkan terpilih' : 'Grow selectively', rule: 'Pressure < 60 AND Prosperity ≥ 40', color: '#17554c' },
+            { q: lang === 'ms' ? 'Lindung nilai' : 'Protect value', rule: 'Pressure ≥ 60 AND Prosperity < 40', color: '#9c6114' },
+            { q: lang === 'ms' ? 'Bina kesiapsiagaan' : 'Build readiness', rule: 'Pressure < 60 AND Prosperity < 40', color: '#7a857e' },
           ].map((row) => (
             <div key={row.q} className="quadrant-row">
               <span className="quadrant-dot" style={{ background: row.color }} />
@@ -355,8 +397,9 @@ function FormulaPanel() {
         <div className="method-caveat">
           <AlertTriangle size={17} />
           <p>
-            Quadrant thresholds are relative to the current set of 16 states. No destination should be labelled
-            "safe," "high potential," or "overloaded" solely from a composite score.
+            {lang === 'ms'
+              ? 'Ambang batas kuadran adalah relatif kepada kumpulan 16 negeri semasa. Tiada destinasi harus dilabel selamat atau sesak semata-mata daripada satu skor komposit.'
+              : 'Quadrant thresholds are relative to the current set of 16 states. No destination should be labelled solely from a composite score.'}
           </p>
         </div>
       </div>
