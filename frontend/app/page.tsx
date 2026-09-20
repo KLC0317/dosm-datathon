@@ -7,6 +7,7 @@ import {
   BarChart3,
   ChevronRight,
   CircleHelp,
+  ClipboardList,
   Download,
   Gauge,
   Info,
@@ -15,7 +16,9 @@ import {
   Map as MapIcon,
   Maximize2,
   Minimize2,
+  Printer,
   RefreshCw,
+  Shield,
   SlidersHorizontal,
   Sparkles,
   Target,
@@ -25,7 +28,19 @@ import {
 } from 'lucide-react'
 import { Annotation, ComposableMap, Geographies, Geography, Marker } from 'react-simple-maps'
 import { VegaEmbed } from 'react-vega'
+import { AlertPanel } from './components/AlertPanel'
+import { DataStatusBadge } from './components/DataStatusBadge'
+import type { Decision } from './components/DecisionRegister'
+import { DecisionRegister } from './components/DecisionRegister'
+import { EvidenceMethodView } from './components/EvidenceMethodView'
+import { PolicyOptionsView } from './components/PolicyOptionsView'
+import { ScoreDecomposition } from './components/ScoreDecomposition'
 
+type ScoreInput = {
+  input: string; raw: number; raw_unit: string; normalised: number
+  weight: number; contribution: number; source: string; period: string
+}
+type ScoreDecompData = { inputs: ScoreInput[]; total: number; stored_score: number }
 type StateRecord = {
   state: string
   population_million: number
@@ -43,6 +58,8 @@ type StateRecord = {
   action: string
   action_detail: string
   confidence: string
+  score_decomposition?: { pressure: ScoreDecompData; prosperity: ScoreDecompData; sensitive_to_weights: boolean }
+  data_status?: Record<string, string>
 }
 
 type DashboardData = {
@@ -67,6 +84,12 @@ type DashboardData = {
   forecast?: {
     status: string
     selected_model: string
+    training_cutoff?: string
+    interval_level?: string
+    interval_coverage_pct?: number
+    interval_coverage_note?: string
+    forecast_limitation?: string
+    seasonal_baseline?: { period: string; naive_million: number | null }[]
     horizon: { period: string; forecast_million: number; lower_million: number; upper_million: number }[]
     backtest: { selected_model: string; candidates: Record<string, { mae: number; rmse: number }> }
     explainability: { driver: string; direction: string; contribution: number; detail: string }[]
@@ -74,10 +97,16 @@ type DashboardData = {
   environment?: {
     source: string
     stress_score: number
+    scope_note?: string
     latest: Record<string, { rolling_12m_mean: number; stress_score: number }>
   }
-  sources: { name: string; url: string }[]
+  sources: { dataset_id?: string; name: string; url: string; owner?: string; official_status?: string; licence?: string; publication_date?: string; extraction_date?: string; reference_period?: string; update_frequency?: string; geographic_coverage?: string; unit_of_measure?: string; definitions?: string; revision_status?: string; pipeline_version?: string; quality_checks?: string; known_gaps?: string; contact?: string }[]
   states: StateRecord[]
+  policy_templates?: Record<string, object[]>
+  alerts?: { alert_id: string; type: string; severity: string; state: string; metric: string; value: number | string; threshold: number | string; message: string; recommended_action: string; source: string }[]
+  decision_register?: Decision[]
+  data_quality?: { checks: object[]; sources_healthy: number; sources_stale: number }
+  data_dictionary?: object[]
 }
 
 type Scenario = {
@@ -1715,7 +1744,7 @@ function PortfolioVisuals({ states }: { states: StateRecord[] }) {
 export default function Home() {
   const [data, setData] = useState<DashboardData>(FALLBACK)
   const [selected, setSelected] = useState('Putrajaya')
-  const [tab, setTab] = useState<'overview' | 'scenario' | 'method'>('overview')
+  const [tab, setTab] = useState<'overview' | 'scenario' | 'policy' | 'decisions' | 'method'>('overview')
   const [promotion, setPromotion] = useState(10)
   const [capacity, setCapacity] = useState(18)
   const [pressureCap, setPressureCap] = useState(70)
@@ -1725,9 +1754,10 @@ export default function Home() {
   const [copilotOpen, setCopilotOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [copilotQuestion, setCopilotQuestion] = useState('')
-  const [copilotAnswer, setCopilotAnswer] = useState('')
+  const [copilotAnswer, setCopilotAnswer] = useState<{ evidence?: string; interpretation?: string; limitations?: string; next_action?: string; answer?: string } | string>('')
   const [briefLoading, setBriefLoading] = useState(false)
   const [darkMode, setDarkMode] = useState(true)
+  const [showDecomp, setShowDecomp] = useState(false)
 
   useEffect(() => {
     Promise.all([
@@ -1805,6 +1835,10 @@ export default function Home() {
     }
   }
 
+  function handlePrint() {
+    window.print()
+  }
+
   async function askCopilot(event?: React.FormEvent) {
     event?.preventDefault()
     if (!copilotQuestion.trim()) return
@@ -1813,19 +1847,32 @@ export default function Home() {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ question: copilotQuestion }),
     }).catch(() => null)
-    if (response?.ok) setCopilotAnswer((await response.json()).answer)
-    else
-      setCopilotAnswer(
-        `For ${selectedState?.state}, the dashboard recommends ${selectedState?.action.toLowerCase()}. Pressure is ${
-          selectedState?.pressure_score
-        }/100 and prosperity potential is ${selectedState?.prosperity_score}/100.`
-      )
+    if (response?.ok) {
+      const result = await response.json()
+      if (result.evidence) {
+        setCopilotAnswer(result)
+      } else {
+        setCopilotAnswer({ answer: result.answer })
+      }
+    } else {
+      setCopilotAnswer({
+        evidence: `${selectedState?.state}: pressure ${selectedState?.pressure_score}/100, prosperity ${selectedState?.prosperity_score}/100. Visitor growth: ${formatPct(selectedState?.visitor_growth_yoy ?? 0)}. CPI YoY: +${selectedState?.cpi_yoy?.toFixed(2) ?? 0}%.`,
+        interpretation: `Recommended direction: ${selectedState?.action}. ${selectedState?.action_detail}`,
+        limitations: 'This is a deterministic local response using DOSM screening indices. No causal claims are made.',
+        next_action: 'Review the Evidence & Method tab for full source traceability. Human review required before decision use.',
+      })
+    }
   }
 
   if (loading && !data.states.length)
     return (
       <main className="app-shell loading-screen">
-        <div className="brand-mark">DS</div>
+        <div className="loading-brand-wordmark">
+          <span className="logo-destinasi">Destinasi</span>
+          <span className="logo-slash" aria-hidden="true">/</span>
+          <span className="logo-seimbang">Seimbang</span>
+        </div>
+        <div className="loading-bar" aria-hidden="true" />
         <p>Loading DOSM evidence layer…</p>
       </main>
     )
@@ -1833,27 +1880,52 @@ export default function Home() {
   return (
     <main className={`app-shell ${darkMode ? 'dark-theme' : 'light-theme'}`}>
       <header className="topbar">
-        <div className="brand">
-          <div className="brand-mark">DS</div>
-          <div>
-            <div className="brand-name">
-              Destinasi <span>Seimbang</span>
+        <div
+          className="brand"
+          onClick={() => setTab('overview')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Enter' && setTab('overview')}
+          title="Destinasi Seimbang — Return to Command Centre"
+        >
+          <div className="brand-logo-text">
+            <div className="brand-wordmark">
+              <span className="logo-destinasi">Destinasi</span>
+              <span className="logo-slash" aria-hidden="true">/</span>
+              <span className="logo-seimbang">Seimbang</span>
+              <span className="logo-badge">DOSM</span>
             </div>
-            <div className="brand-sub">Tourism pressure → prosperity intelligence</div>
+            <div className="brand-subline">
+              <span>Tourism pressure</span>
+              <span className="subline-arrow">→</span>
+              <span>prosperity intelligence</span>
+            </div>
           </div>
         </div>
         <nav className="main-nav" aria-label="Primary navigation">
           <button className={tab === 'overview' ? 'active' : ''} onClick={() => setTab('overview')}>
             Command centre
           </button>
+          <button className={tab === 'policy' ? 'active' : ''} onClick={() => setTab('policy')}>
+            Policy options
+          </button>
           <button className={tab === 'scenario' ? 'active' : ''} onClick={() => setTab('scenario')}>
             What-if lab
           </button>
+          <button className={tab === 'decisions' ? 'active' : ''} onClick={() => setTab('decisions')}>
+            Decision log
+            {data.decision_register && data.decision_register.length > 0 && (
+              <span className="nav-tab-badge">{data.decision_register.length}</span>
+            )}
+          </button>
           <button className={tab === 'method' ? 'active' : ''} onClick={() => setTab('method')}>
-            Evidence & method
+            Evidence &amp; method
           </button>
         </nav>
         <div className="top-actions">
+          {data.alerts && data.alerts.length > 0 && (
+            <AlertPanel alerts={data.alerts as any} onSelectState={(s) => { setSelected(s); setTab('overview') }} />
+          )}
           <button
             className="theme-toggle"
             onClick={() => setDarkMode((value) => !value)}
@@ -1861,6 +1933,9 @@ export default function Home() {
           >
             <span className={darkMode ? 'active' : ''}>Dark</span>
             <span className={!darkMode ? 'active' : ''}>Light</span>
+          </button>
+          <button className="icon-button" aria-label="Print / export PDF" onClick={handlePrint} title="Print / Save as PDF">
+            <Printer size={18} />
           </button>
           <button className="icon-button" aria-label="Refresh data" onClick={() => location.reload()}>
             <RefreshCw size={18} />
@@ -2038,10 +2113,10 @@ export default function Home() {
                         <div className="score-card risk">
                           <div className="score-card-top">
                             <span>Pressure risk</span>
-                            <strong>
-                              {selectedState.pressure_score}
-                              <small>/100</small>
-                            </strong>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <strong>{selectedState.pressure_score}<small>/100</small></strong>
+                              <DataStatusBadge status="derived" compact source="DOSM DTS 2025 + CPI + Population" period="2025" />
+                            </div>
                           </div>
                           <ScoreBar label="Pressure risk" value={selectedState.pressure_score} tone="coral" />
                           <p>Higher index means stronger demand pressure against local capacity.</p>
@@ -2049,10 +2124,10 @@ export default function Home() {
                         <div className="score-card potential">
                           <div className="score-card-top">
                             <span>Prosperity potential</span>
-                            <strong>
-                              {selectedState.prosperity_score}
-                              <small>/100</small>
-                            </strong>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <strong>{selectedState.prosperity_score}<small>/100</small></strong>
+                              <DataStatusBadge status="derived" compact source="DOSM DTS 2025 + Population" period="2025" />
+                            </div>
                           </div>
                           <ScoreBar label="Prosperity potential" value={selectedState.prosperity_score} />
                           <p>Higher index indicates room for high-value overnight tourism capture.</p>
@@ -2061,19 +2136,53 @@ export default function Home() {
                       <div className="metric-line">
                         <span>
                           Visitors / 100 residents <strong>{selectedState.visitors_per_100_residents}</strong>
+                          <DataStatusBadge status="derived" compact />
                         </span>
                         <span>
                           Visitor growth <strong className="green">{formatPct(selectedState.visitor_growth_yoy)}</strong>
+                          <DataStatusBadge status="derived" compact />
                         </span>
                         <span>
                           Tourist mix <strong>{selectedState.tourist_mix_pct}%</strong>
+                          <DataStatusBadge status="observed" compact />
                         </span>
                       </div>
+                      {selectedState.score_decomposition && (
+                        <div className="decomp-toggle-wrap">
+                          <button
+                            type="button"
+                            className="outline-button"
+                            onClick={() => setShowDecomp(!showDecomp)}
+                            aria-expanded={showDecomp}
+                          >
+                            {showDecomp ? '▲ Hide score breakdown' : '▼ Show score breakdown'}
+                          </button>
+                          {showDecomp && (
+                            <ScoreDecomposition
+                              state={selectedState.state}
+                              pressureDecomp={selectedState.score_decomposition.pressure}
+                              prosperityDecomp={selectedState.score_decomposition.prosperity}
+                              sensitiveToWeights={selectedState.score_decomposition.sensitive_to_weights}
+                            />
+                          )}
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
               </div>
             </div>
+          )}
+
+          {tab === 'policy' && (
+            <PolicyOptionsView
+              stateName={selected}
+              options={(data.policy_templates?.[selected] ?? data.policy_templates?.[Object.keys(data.policy_templates ?? {})[0]] ?? []) as any}
+            />
+          )}
+
+          {tab === 'decisions' && (
+            <DecisionRegister decisions={(data.decision_register ?? []) as Decision[]} />
           )}
 
           {tab === 'scenario' && (
@@ -2235,86 +2344,13 @@ export default function Home() {
           )}
 
           {tab === 'method' && (
-            <div className="method-view">
-              <div className="method-hero">
-                <div>
-                  <p className="kicker">EVIDENCE & METHOD</p>
-                  <h2>
-                    Every signal has a<br />
-                    <em>source and an audit trail.</em>
-                  </h2>
-                  <p>
-                    Designed for public-sector review: inspect the raw input, verify the transformation logic, and export transparent
-                    reasoning behind any recommended action.
-                  </p>
-                </div>
-                <div className="method-seal">
-                  <Layers3 size={26} />
-                  <span>
-                    Source
-                    <br />
-                    <strong>audited</strong>
-                  </span>
-                </div>
-              </div>
-              <div className="method-grid">
-                <div className="panel source-panel">
-                  <div className="panel-heading">
-                    <div>
-                      <span className="eyebrow">Data spine</span>
-                      <h2>Official DOSM sources in this build</h2>
-                    </div>
-                    <span className="pill">6 official feeds</span>
-                  </div>
-                  {data.sources.map((source, index) => (
-                    <a className="source-row" href={source.url} target="_blank" rel="noreferrer" key={source.name}>
-                      <span className="source-index">0{index + 1}</span>
-                      <span>
-                        <strong>{source.name}</strong>
-                        <small>{source.url.replace('https://', '')}</small>
-                      </span>
-                      <ChevronRight size={16} />
-                    </a>
-                  ))}
-                </div>
-                <div className="panel formula-panel">
-                  <div className="panel-heading">
-                    <div>
-                      <span className="eyebrow">Scoring contract</span>
-                      <h2>How the screening signals are built</h2>
-                    </div>
-                    <CircleHelp size={18} />
-                  </div>
-                  <div className="formula">
-                    <span>Pressure Index</span>
-                    <strong>50% visitor density + 30% visitor growth velocity + 20% state CPI inflation</strong>
-                  </div>
-                  <div className="formula">
-                    <span>Prosperity Potential</span>
-                    <strong>35% visitor density + 30% growth velocity + 35% overnight tourist mix</strong>
-                  </div>
-                  <div className="formula">
-                    <span>Demand Forecasting</span>
-                    <strong>Damped ETS + AutoReg ensemble chosen by rolling 4-quarter holdout RMSE</strong>
-                  </div>
-                  <div className="method-caveat">
-                    <TriangleAlert size={17} />
-                    <p>
-                      Relative screening indices. A high score is an evidence-backed reason to investigate and safeguard, not an official
-                      carrying-capacity barrier.
-                    </p>
-                  </div>
-                  <div className="method-meta">
-                    <span>Data refresh vintage</span>
-                    <strong>{data.data_as_of || 'Latest DOSM extract'}</strong>
-                  </div>
-                  <div className="method-meta">
-                    <span>API status</span>
-                    <strong className="green">Active · Local fallback enabled</strong>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <EvidenceMethodView
+              sources={data.sources as any}
+              dataQuality={data.data_quality as any}
+              dataDictionary={data.data_dictionary as any}
+              dataAsOf={data.data_as_of || 'Latest DOSM extract'}
+              generatedAt={data.generated_at || '—'}
+            />
           )}
         </section>
       </div>
@@ -2348,8 +2384,40 @@ export default function Home() {
             </form>
             {copilotAnswer && (
               <div className="copilot-answer">
-                <span className="eyebrow">Answer</span>
-                <p>{copilotAnswer}</p>
+                <div className="copilot-ai-badge">
+                  <Sparkles size={12} /> AI Generated — requires human review before decision use
+                </div>
+                {typeof copilotAnswer === 'string' ? (
+                  <p>{copilotAnswer}</p>
+                ) : (
+                  <>
+                    {copilotAnswer.evidence && (
+                      <div className="copilot-section">
+                        <span className="eyebrow">Evidence</span>
+                        <p>{copilotAnswer.evidence}</p>
+                      </div>
+                    )}
+                    {copilotAnswer.interpretation && (
+                      <div className="copilot-section">
+                        <span className="eyebrow">Interpretation</span>
+                        <p>{copilotAnswer.interpretation}</p>
+                      </div>
+                    )}
+                    {copilotAnswer.limitations && (
+                      <div className="copilot-section caveat-section">
+                        <span className="eyebrow"><TriangleAlert size={11} /> Limitations</span>
+                        <p>{copilotAnswer.limitations}</p>
+                      </div>
+                    )}
+                    {copilotAnswer.next_action && (
+                      <div className="copilot-section">
+                        <span className="eyebrow">Next action</span>
+                        <p>{copilotAnswer.next_action}</p>
+                      </div>
+                    )}
+                    {copilotAnswer.answer && <p>{copilotAnswer.answer}</p>}
+                  </>
+                )}
                 <small>Deterministic local evidence service · DOSM official data</small>
               </div>
             )}
