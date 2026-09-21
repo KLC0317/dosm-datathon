@@ -121,10 +121,10 @@ function SourceCard({ source, quality }: { source: Source; quality?: QualityChec
             <SourceField label={lang === 'ms' ? 'Liputan geografi' : 'Geographic coverage'} value={source.geographic_coverage} />
             <SourceField label={lang === 'ms' ? 'Unit ukuran' : 'Unit of measure'} value={source.unit_of_measure} />
             <SourceField label={lang === 'ms' ? 'Status semakan' : 'Revision status'} value={source.revision_status} />
-            <SourceField label={lang === 'ms' ? 'Versi saluran paip' : 'Processing version'} value={source.pipeline_version} />
+            <SourceField label={lang === 'ms' ? 'Versi pemprosesan' : 'Processing version'} value={source.pipeline_version} />
             <SourceField label={lang === 'ms' ? 'Penyelaras' : 'Contact'} value={source.contact} />
           </div>
-          <SourceField label={lang === 'ms' ? 'Definisi operasi' : 'How this data defines its terms'} value={source.definitions} wide />
+          <SourceField label={lang === 'ms' ? 'Bagaimana data ini mentakrifkan istilahnya' : 'How this data defines its terms'} value={source.definitions} wide />
           <SourceField label={lang === 'ms' ? 'Semakan kualiti dikenakan' : 'Quality checks applied'} value={source.quality_checks} wide />
           <SourceField label={lang === 'ms' ? 'Kekangan & jurang diketahui' : 'Known gaps and limitations'} value={source.known_gaps} wide isWarning />
           <a className="source-url-link" href={source.url} target="_blank" rel="noreferrer">
@@ -188,7 +188,7 @@ function QualityPanel({ checks, healthyCount, staleCount }: { checks: QualityChe
             </span>
             <span>{c.required_fields_present ? <CheckCircle2 size={14} className="ok" /> : <XCircle size={14} className="fail" />}</span>
             <span>{c.types_valid ? <CheckCircle2 size={14} className="ok" /> : <XCircle size={14} className="fail" />}</span>
-            <span>{c.totals_reconciled ? <CheckCircle2 size={14} className="ok" /> : '—'}</span>
+            <span>{c.totals_reconciled ? <CheckCircle2 size={14} className="ok" /> : 'N/A'}</span>
             <span>{c.duplicates_detected === 0 ? '0' : <strong className="fail">{c.duplicates_detected}</strong>}</span>
             <span>{c.stale ? <AlertTriangle size={14} className="warn" /> : <CheckCircle2 size={14} className="ok" />}</span>
             <span className="refresh-date">{c.last_successful_refresh}</span>
@@ -198,7 +198,7 @@ function QualityPanel({ checks, healthyCount, staleCount }: { checks: QualityChe
       <div className="quality-key">
         <span><CheckCircle2 size={13} className="ok" /> {lang === 'ms' ? 'lulus' : 'passed'}</span>
         <span><AlertTriangle size={13} className="warn" /> {lang === 'ms' ? 'perlu perhatian' : 'needs attention'}</span>
-        <span>{lang === 'ms' ? '— tidak berkenaan' : '— not applicable'}</span>
+        <span>{lang === 'ms' ? 'N/A (tidak berkenaan)' : 'N/A (not applicable)'}</span>
       </div>
       {checks.filter((c) => c.stale && c.stale_note).map((c) => (
         <div key={`note-${c.dataset_id}`} className="stale-warning">
@@ -302,12 +302,12 @@ export function EvidenceMethodView({ sources, dataQuality, dataDictionary, dataA
             onClick={() => setSubTab(sub)}
           >
             {sub === 'formula'
-              ? (lang === 'ms' ? 'Kontrak pemarkahan' : 'How the scores work')
+              ? (lang === 'ms' ? 'Bagaimana skor berfungsi' : 'How the scores work')
               : sub === 'sources'
-              ? (lang === 'ms' ? 'Daftar sumber' : 'Where the data comes from')
+              ? (lang === 'ms' ? 'Dari mana data datang' : 'Where the data comes from')
               : sub === 'quality'
               ? (lang === 'ms' ? 'Kualiti data' : 'Data quality')
-              : (lang === 'ms' ? 'Kamus data' : 'What each term means')}
+              : (lang === 'ms' ? 'Apa maksud setiap istilah' : 'What each term means')}
           </button>
         ))}
       </div>
@@ -384,8 +384,8 @@ function FormulaPanel() {
           <span>{lang === 'ms' ? 'Simulasi Intervensi' : 'Intervention Simulation'}</span>
           <strong>
             {lang === 'ms'
-              ? 'Model andaian ringkas — kadar tindak balas tetap yang diterbitkan, dikenakan pada skor'
-              : 'A simple what-if model — fixed, published response rates applied to the scores'}
+              ? 'Model andaian ringkas: kadar tindak balas tetap yang diterbitkan, dikenakan pada skor'
+              : 'A simple what-if model: fixed, published response rates applied to the scores'}
           </strong>
           <small>
             {lang === 'ms'

@@ -173,13 +173,13 @@ def brief(request: BriefRequest):
             f"pressure cap {request.scenario.pressure_cap:.0f}."
         )
     lines = [
-        "# Destinasi Seimbang — Policy Brief",
+        "# Destinasi Seimbang: Policy Brief",
         "",
         f"**Destination:** {selected['state']}",
         f"**Data vintage:** {data['data_as_of']}",
         "",
         "## Recommended direction",
-        f"**{selected['action']}** — {selected['action_detail']}",
+        f"**{selected['action']}**: {selected['action_detail']}",
         "",
         "## Evidence",
         f"- Pressure score: {selected['pressure_score']}/100",

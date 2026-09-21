@@ -70,13 +70,13 @@ function DecisionCard({ decision }: { decision: Decision }) {
         <div className="decision-body">
           <div className="decision-grid">
             <DecField label={lang === 'ms' ? 'Destinasi' : 'Destination'} value={decision.destination} />
-            <DecField label={lang === 'ms' ? 'Tempoh asas' : 'Data used'} value={decision.baseline_period} />
+            <DecField label={lang === 'ms' ? 'Data digunakan' : 'Data used'} value={decision.baseline_period} />
             <DecField label={lang === 'ms' ? 'Pegawai bertanggungjawab' : 'Responsible owner'} value={decision.responsible_owner} />
             <DecField label={lang === 'ms' ? 'Penyemak' : 'Reviewer'} value={decision.reviewer} />
             <DecField label={lang === 'ms' ? 'Peruntukan' : 'Budget'} value={decision.budget} />
             <DecField label={lang === 'ms' ? 'Tarikh semakan hasil' : 'When we check the result'} value={decision.outcome_review_date} />
-            <DecField label={lang === 'ms' ? 'Versi bukti' : 'Data snapshot'} value={decision.evidence_version} />
-            <DecField label={lang === 'ms' ? 'Versi model' : 'Scoring version'} value={decision.model_version} />
+            <DecField label={lang === 'ms' ? 'Tangkapan data' : 'Data snapshot'} value={decision.evidence_version} />
+            <DecField label={lang === 'ms' ? 'Versi pemarkahan' : 'Scoring version'} value={decision.model_version} />
             <DecField label={lang === 'ms' ? 'Pelaksanaan' : 'Implementation'} value={`${decision.implementation_dates.start} → ${decision.implementation_dates.end}`} />
           </div>
 
@@ -84,7 +84,7 @@ function DecisionCard({ decision }: { decision: Decision }) {
           <DecSection label={lang === 'ms' ? 'Rasional pemilihan' : 'Reason for selection'} value={decision.reason_for_selection} />
 
           <div className="decision-list-section">
-            <span className="dec-label">{lang === 'ms' ? 'Pilihan dipertimbangkan' : 'What else we considered'}</span>
+            <span className="dec-label">{lang === 'ms' ? 'Apa lagi yang kami pertimbangkan' : 'What else we considered'}</span>
             <ul>{decision.options_considered.map((o, i) => <li key={i}>{o}</li>)}</ul>
           </div>
 
@@ -99,7 +99,7 @@ function DecisionCard({ decision }: { decision: Decision }) {
           </div>
 
           <div className="decision-list-section warning-list">
-            <span className="dec-label"><AlertTriangle size={13} /> {lang === 'ms' ? 'Kekangan & had diketahui' : 'What this does not tell us'}</span>
+            <span className="dec-label"><AlertTriangle size={13} /> {lang === 'ms' ? 'Apa yang ini tidak memberitahu kita' : 'What this does not tell us'}</span>
             <ul>{decision.known_limitations.map((l, i) => <li key={i}>{l}</li>)}</ul>
           </div>
 
@@ -164,7 +164,7 @@ export function DecisionRegister({ decisions: initialDecisions }: { decisions: D
     <div className="decision-view">
       <div className="decision-hero">
         <div>
-          <p className="kicker">{lang === 'ms' ? 'JEJAK TADBIR URUS & DAFTAR KEPUTUSAN' : 'DECISION RECORD'}</p>
+          <p className="kicker">{lang === 'ms' ? 'REKOD KEPUTUSAN' : 'DECISION RECORD'}</p>
           <h2>
             {lang === 'ms' ? 'Perkara yang disemak,' : 'What was reviewed,'}
             <br />
@@ -172,7 +172,7 @@ export function DecisionRegister({ decisions: initialDecisions }: { decisions: D
           </h2>
           <p>
             {lang === 'ms'
-              ? 'Daftar keputusan demonstratif untuk prototaip pertandingan. Dalam pelaksanaan operasi sebenar, rekod ini disimpan secara berpusat, dikawal capaian, mempunyai kawalan versi dan jejak audit penuh.'
+              ? 'Contoh bagaimana keputusan akan direkodkan. Dalam pelaksanaan sebenar, rekod ini akan disimpan secara kekal, dikawal capaian, dijejak versi dan boleh diaudit sepenuhnya.'
               : 'A worked example of how decisions would be recorded. In a real deployment these would be saved permanently, access-controlled, version-tracked and fully auditable.'}
           </p>
           <div className="policy-disclaimer">
@@ -215,7 +215,7 @@ export function DecisionRegister({ decisions: initialDecisions }: { decisions: D
           onClick={() => {
             const newDec: Decision = {
               decision_id: `DEC-2026-${String(decisions.length + 1).padStart(3, '0')}`,
-              decision_question: lang === 'ms' ? 'Keputusan baru — sila sunting ruangan ini' : 'New decision — edit this field',
+              decision_question: lang === 'ms' ? 'Keputusan baru, sila sunting ruangan ini' : 'New decision, edit this field',
               destination: lang === 'ms' ? 'Pilih destinasi' : 'Select destination',
               baseline_period: 'Q1 2026',
               options_considered: [lang === 'ms' ? 'Pilihan 0: Kekalkan dasar sedia ada' : 'Option 0: Maintain current policy'],
@@ -230,9 +230,9 @@ export function DecisionRegister({ decisions: initialDecisions }: { decisions: D
               responsible_owner: lang === 'ms' ? 'Untuk diagihkan' : 'To be assigned',
               reviewer: lang === 'ms' ? 'Untuk diagihkan' : 'To be assigned',
               approval_status: 'draft',
-              implementation_dates: { start: '—', end: '—' },
+              implementation_dates: { start: 'TBD', end: 'TBD' },
               monitoring_kpis: [],
-              outcome_review_date: '—',
+              outcome_review_date: lang === 'ms' ? 'Untuk ditentukan' : 'To be determined',
               decision_result: null,
               revision_reason: null,
               created_at: new Date().toISOString(),
@@ -261,7 +261,7 @@ export function DecisionRegister({ decisions: initialDecisions }: { decisions: D
         <AlertTriangle size={14} />
         <span>
           {lang === 'ms'
-            ? 'Untuk pelaksanaan operasi: keputusan mesti disimpan dalam sistem berterusan, dikawal kebenaran, dan berversi dengan jejak audit penuh. Prototaip ini menyimpan keputusan dalam memori sahaja.'
+            ? 'Untuk pelaksanaan sebenar, keputusan perlu disimpan secara kekal, dikawal capaian dan dijejak versi, dengan jejak audit penuh. Prototaip ini hanya menyimpannya sehingga anda memuat semula halaman.'
             : 'For a real deployment, decisions would need to be stored permanently, access-controlled and version-tracked, with a full audit trail. This prototype keeps them only until you refresh the page.'}
         </span>
       </div>

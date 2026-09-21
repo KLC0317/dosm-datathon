@@ -4,6 +4,25 @@ import { AlertTriangle, Info } from 'lucide-react'
 import { DataStatusBadge } from './DataStatusBadge'
 import { useLanguage } from '../lib/i18n'
 
+// The backend only writes these labels in English (`enrich_data.py`); this
+// lookup is the Malay side of that fixed, known set of metric names/units/
+// periods so the decomposition table is not English-only in BM mode.
+const INPUT_LABEL_MS: Record<string, string> = {
+  'Visitor density (per 100 residents)': 'Ketumpatan pelawat (setiap 100 penduduk)',
+  'Visitor growth momentum': 'Pertumbuhan pelawat',
+  'State CPI inflation': 'Inflasi IHP negeri',
+  'Overnight tourist mix': 'Bahagian pelancong bermalam',
+}
+const RAW_UNIT_MS: Record<string, string> = {
+  'visitors/100 residents': 'pelawat/100 penduduk',
+  '% year-on-year': '% tahun ke tahun',
+  '% overnight share': '% bahagian bermalam',
+}
+const PERIOD_MS: Record<string, string> = {
+  '2025 annual': '2025 tahunan',
+  '2025 vs 2024': '2025 berbanding 2024',
+}
+
 type ScoreInput = {
   input: string
   raw: number
@@ -71,7 +90,7 @@ function DecompTable({
   total: number
   colorClass: string
 }) {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
 
   return (
     <div className="decomp-table-block">
@@ -88,11 +107,11 @@ function DecompTable({
         {inputs.map((inp) => (
           <div key={inp.input} className="decomp-row" role="row">
             <span role="cell" className="decomp-input-name">
-              {inp.input}
+              {lang === 'ms' ? (INPUT_LABEL_MS[inp.input] ?? inp.input) : inp.input}
               <DataStatusBadge status="derived" compact />
             </span>
             <span role="cell">
-              {inp.raw} <small>{inp.raw_unit}</small>
+              {inp.raw} <small>{lang === 'ms' ? (RAW_UNIT_MS[inp.raw_unit] ?? inp.raw_unit) : inp.raw_unit}</small>
             </span>
             <span role="cell">
               <NormBar value={inp.normalised} />
@@ -104,7 +123,7 @@ function DecompTable({
             <span role="cell" className="decomp-source">
               <DataStatusBadge status="observed" compact />
               {inp.source}
-              <small>{inp.period}</small>
+              <small>{lang === 'ms' ? (PERIOD_MS[inp.period] ?? inp.period) : inp.period}</small>
             </span>
           </div>
         ))}
@@ -112,13 +131,9 @@ function DecompTable({
           <span role="cell" className="total-label">
             {t('decompTotalScore')}
           </span>
-          <span role="cell" />
-          <span role="cell" />
-          <span role="cell" />
           <span role="cell" className={`decomp-contribution total-score ${colorClass}`}>
             {total}
           </span>
-          <span role="cell" />
         </div>
       </div>
     </div>

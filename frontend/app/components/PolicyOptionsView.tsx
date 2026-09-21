@@ -99,9 +99,9 @@ function OptionCard({ option, isExpanded, onToggle }: { option: PolicyOption; is
             <OptionField label={lang === 'ms' ? 'Tarikh semakan' : 'Review date'} value={option.review_date} icon={<Clock size={13} />} />
           </div>
 
-          <OptionSection label={lang === 'ms' ? 'Keterangan intervensi' : 'What it involves'} value={option.intervention_description} />
+          <OptionSection label={lang === 'ms' ? 'Apa yang terlibat' : 'What it involves'} value={option.intervention_description} />
           <OptionSection label={t('evidenceSupport')} value={option.evidence_supporting} status="observed" />
-          <OptionSection label={lang === 'ms' ? 'Jurang data / bukti' : 'What the evidence does not cover'} value={option.evidence_gaps} status="unavailable" isWarning />
+          <OptionSection label={lang === 'ms' ? 'Apa yang tidak dilitupi oleh bukti' : 'What the evidence does not cover'} value={option.evidence_gaps} status="unavailable" isWarning />
           <OptionSection label={t('expectedOutput')} value={option.expected_output} />
           <OptionSection label={t('intendedOutcome')} value={option.intended_outcome} />
           <OptionSection label={t('riskMitigation')} value={option.risk_mitigation} isWarning />
@@ -166,7 +166,7 @@ function TheoryOfChange({ option }: { option: PolicyOption }) {
             {i < steps.length - 1 && (
               <div className="toc-arrow">
                 <span>→</span>
-                <small>{lang === 'ms' ? 'andaian' : 'if this holds'}</small>
+                <small>{lang === 'ms' ? 'jika ini berlaku' : 'if this holds'}</small>
               </div>
             )}
           </div>
@@ -179,9 +179,13 @@ function TheoryOfChange({ option }: { option: PolicyOption }) {
 export function PolicyOptionsView({
   stateName,
   options,
+  states,
+  onSelectState,
 }: {
   stateName: string
   options: PolicyOption[]
+  states: string[]
+  onSelectState: (state: string) => void
 }) {
   const { lang, t } = useLanguage()
   const [expandedId, setExpandedId] = useState<string | null>(options[0]?.option_id ?? null)
@@ -200,9 +204,21 @@ export function PolicyOptionsView({
         <div>
           <p className="kicker">{lang === 'ms' ? 'PILIHAN DASAR' : 'POLICY OPTIONS'}</p>
           <h2>
-            {lang === 'ms' ? 'Pilihan intervensi sedia ada' : 'What choices are available'}
+            {lang === 'ms' ? 'Pilihan yang tersedia' : 'What choices are available'}
             <br />
-            <em>{lang === 'ms' ? `untuk ${stateName}?` : `for ${stateName}?`}</em>
+            <em>{lang === 'ms' ? 'untuk' : 'for'}</em>{' '}
+            <label className="policy-state-picker">
+              <span className="sr-only">{lang === 'ms' ? 'Pilih negeri' : 'Select state'}</span>
+              <select value={stateName} onChange={(e) => onSelectState(e.target.value)}>
+                {states.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown size={16} aria-hidden="true" />
+            </label>
+            <em>?</em>
           </h2>
           <p>{t('policyOptionsDesc')}</p>
           <div className="policy-disclaimer">
@@ -236,7 +252,7 @@ export function PolicyOptionsView({
         <div className="panel-heading">
           <div>
             <span className="eyebrow">{t('tocTitle')}</span>
-            <h2>{lang === 'ms' ? 'Daripada Masalah ke Kemakmuran' : 'From problem to result'}</h2>
+            <h2>{lang === 'ms' ? 'Daripada masalah kepada hasil' : 'From problem to result'}</h2>
           </div>
           <div className="toc-option-selector">
             {options.filter((o) => o.type !== 'baseline').map((o) => (
@@ -254,7 +270,7 @@ export function PolicyOptionsView({
         {activeOption && <TheoryOfChange option={activeOption} />}
         <p className="toc-caveat">
           {lang === 'ms'
-            ? 'Setiap anak panah mewakili andaian. Andaian wajar disemak dan disokong oleh bukti data sebelum keputusan diluluskan secara rasmi.'
+            ? 'Setiap anak panah adalah langkah yang kami andaikan akan berlaku. Semak setiap satu berdasarkan bukti sebelum meluluskan apa-apa.'
             : 'Each arrow is a step we are assuming will hold. Check each one against evidence before approving anything.'}
         </p>
       </div>

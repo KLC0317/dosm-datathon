@@ -483,11 +483,30 @@ function MalaysiaMap({
     }
   }
 
-// The callout is a fixed 184x52 box hung off the selected state's centroid. On
+// The callout is a fixed box hung off the selected state's centroid. On
 // a right-side state, and whenever the map is zoomed, the naive offset pushed
 // it past the SVG frame and the text was cut off. Flip and clamp instead.
-const CALLOUT_W = 184
+// The three text rows are rendered via foreignObject <div>s (not raw SVG
+// <text>) so long state/quadrant names truncate with an ellipsis instead of
+// spilling past the box edge.
+const CALLOUT_W = 200
 const CALLOUT_H = 52
+const CALLOUT_PAD = 12
+const CALLOUT_TEXT_W = CALLOUT_W - CALLOUT_PAD * 2
+
+function calloutLineStyle(fontSize: number, fontWeight: number, color: string, letterSpacing?: string): React.CSSProperties {
+  return {
+    fontSize,
+    fontWeight,
+    color,
+    letterSpacing,
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    width: '100%',
+    lineHeight: 1.3,
+  }
+}
 
 function calloutBox(centerX: number, svgWidth: number, preferRight: boolean) {
   // centerX is the projected x of the marker; markers are drawn at the
@@ -549,8 +568,8 @@ function calloutBox(centerX: number, svgWidth: number, preferRight: boolean) {
           </span>
           <small>
             {lang === 'ms'
-              ? 'Setiap negeri diwarnakan mengikut skor tekanannya — sejauh mana permintaan pelawat menekan kapasiti tempatan.'
-              : 'Each state shaded by its pressure score — how hard visitor demand is pushing on local capacity.'}
+              ? 'Setiap negeri diwarnakan mengikut skor tekanannya, sejauh mana permintaan pelawat menekan kapasiti tempatan.'
+              : 'Each state shaded by its pressure score: how hard visitor demand is pushing on local capacity.'}
           </small>
         </div>
         <div className="map-controls">
@@ -578,7 +597,7 @@ function calloutBox(centerX: number, svgWidth: number, preferRight: boolean) {
               className={mapMode === 'klang' ? 'active' : ''}
               aria-pressed={mapMode === 'klang'}
               onClick={() => setMapMode('klang')}
-              title={lang === 'ms' ? 'Tumpuan pada Kuala Lumpur, Putrajaya, Selangor dan Labuan — kawasan bertekanan paling tinggi' : 'Close-up on Kuala Lumpur, Putrajaya, Selangor and Labuan — the highest-pressure area'}
+              title={lang === 'ms' ? 'Tumpuan pada Kuala Lumpur, Putrajaya, Selangor dan Labuan: kawasan bertekanan paling tinggi' : 'Close-up on Kuala Lumpur, Putrajaya, Selangor and Labuan: the highest-pressure area'}
             >
               <Target size={14} /> <span>{lang === 'ms' ? 'Lembah Klang' : 'Klang Valley'}</span>
             </button>
@@ -909,21 +928,21 @@ function calloutBox(centerX: number, svgWidth: number, preferRight: boolean) {
                             strokeWidth={1.8}
                             filter="drop-shadow(0 4px 16px rgba(22,31,27,0.28))"
                           />
-                          <text x={12} y={18} fill={colors.ink} fontSize={12} fontWeight={800} letterSpacing="0.04em">
-                            {westCallout.record.state.toUpperCase()}
-                          </text>
-                          <text
-                            x={12}
-                            y={33}
-                            fill={scoreColor(westCallout.record.pressure_score)}
-                            fontSize={10.5}
-                            fontWeight={800}
-                          >
-                            ● {westCallout.record.pressure_score}/100 {lang === 'ms' ? 'Tekanan' : 'Pressure'} ({translateQuadrant(westCallout.record.quadrant)})
-                          </text>
-                          <text x={12} y={46} fill={colors.muted} fontSize={9.5} fontWeight={600}>
-                            {westCallout.record.visitors_2025_million.toFixed(1)}{lang === 'ms' ? 'j pelawat' : 'm visitors'} • {isZoomed ? (lang === 'ms' ? 'Klik untuk keluar fokus' : 'Click to zoom out') : (lang === 'ms' ? 'Klik untuk fokus' : 'Click to zoom in')}
-                          </text>
+                          <foreignObject x={CALLOUT_PAD} y={6} width={CALLOUT_TEXT_W} height={16}>
+                            <div style={calloutLineStyle(12, 800, colors.ink, '0.04em')}>
+                              {westCallout.record.state.toUpperCase()}
+                            </div>
+                          </foreignObject>
+                          <foreignObject x={CALLOUT_PAD} y={25} width={CALLOUT_TEXT_W} height={14}>
+                            <div style={calloutLineStyle(10.5, 800, scoreColor(westCallout.record.pressure_score))}>
+                              ● {westCallout.record.pressure_score}/100 {lang === 'ms' ? 'Tekanan' : 'Pressure'} ({translateQuadrant(westCallout.record.quadrant)})
+                            </div>
+                          </foreignObject>
+                          <foreignObject x={CALLOUT_PAD} y={38} width={CALLOUT_TEXT_W} height={13}>
+                            <div style={calloutLineStyle(9.5, 600, colors.muted)}>
+                              {westCallout.record.visitors_2025_million.toFixed(1)}{lang === 'ms' ? 'j pelawat' : 'm visitors'} • {isZoomed ? (lang === 'ms' ? 'Klik untuk keluar fokus' : 'Click to zoom out') : (lang === 'ms' ? 'Klik untuk fokus' : 'Click to zoom in')}
+                            </div>
+                          </foreignObject>
                         </g>
                       </g>
                     </Marker>
@@ -1122,21 +1141,21 @@ function calloutBox(centerX: number, svgWidth: number, preferRight: boolean) {
                             strokeWidth={1.8}
                             filter="drop-shadow(0 4px 16px rgba(22,31,27,0.28))"
                           />
-                          <text x={12} y={18} fill={colors.ink} fontSize={12} fontWeight={800} letterSpacing="0.04em">
-                            {eastCallout.record.state.toUpperCase()}
-                          </text>
-                          <text
-                            x={12}
-                            y={33}
-                            fill={scoreColor(eastCallout.record.pressure_score)}
-                            fontSize={10.5}
-                            fontWeight={800}
-                          >
-                            ● {eastCallout.record.pressure_score}/100 {lang === 'ms' ? 'Tekanan' : 'Pressure'} ({translateQuadrant(eastCallout.record.quadrant)})
-                          </text>
-                          <text x={12} y={46} fill={colors.muted} fontSize={9.5} fontWeight={600}>
-                            {eastCallout.record.visitors_2025_million.toFixed(1)}{lang === 'ms' ? 'j pelawat' : 'm visitors'} • {isZoomed ? (lang === 'ms' ? 'Klik untuk keluar fokus' : 'Click to zoom out') : (lang === 'ms' ? 'Klik untuk fokus' : 'Click to zoom in')}
-                          </text>
+                          <foreignObject x={CALLOUT_PAD} y={6} width={CALLOUT_TEXT_W} height={16}>
+                            <div style={calloutLineStyle(12, 800, colors.ink, '0.04em')}>
+                              {eastCallout.record.state.toUpperCase()}
+                            </div>
+                          </foreignObject>
+                          <foreignObject x={CALLOUT_PAD} y={25} width={CALLOUT_TEXT_W} height={14}>
+                            <div style={calloutLineStyle(10.5, 800, scoreColor(eastCallout.record.pressure_score))}>
+                              ● {eastCallout.record.pressure_score}/100 {lang === 'ms' ? 'Tekanan' : 'Pressure'} ({translateQuadrant(eastCallout.record.quadrant)})
+                            </div>
+                          </foreignObject>
+                          <foreignObject x={CALLOUT_PAD} y={38} width={CALLOUT_TEXT_W} height={13}>
+                            <div style={calloutLineStyle(9.5, 600, colors.muted)}>
+                              {eastCallout.record.visitors_2025_million.toFixed(1)}{lang === 'ms' ? 'j pelawat' : 'm visitors'} • {isZoomed ? (lang === 'ms' ? 'Klik untuk keluar fokus' : 'Click to zoom out') : (lang === 'ms' ? 'Klik untuk fokus' : 'Click to zoom in')}
+                            </div>
+                          </foreignObject>
                         </g>
                       </g>
                     </Marker>
@@ -1155,8 +1174,8 @@ function calloutBox(centerX: number, svgWidth: number, preferRight: boolean) {
               <strong>{lang === 'ms' ? 'Grid Kartogram Sama Luas (16 Wilayah)' : 'Equal-Area Cartogram Grid (16 Territories)'}</strong>
               <p>
                 {lang === 'ms'
-                  ? 'Setiap negeri mendapat petak bersaiz sama. Pada peta sebenar, tempat kecil seperti Putrajaya dan Kuala Lumpur hampir hilang — di sini ia mendapat ruang yang sama.'
-                  : 'Every state gets the same size tile. On a real map, small places like Putrajaya and Kuala Lumpur almost disappear — here they get equal space.'}
+                  ? 'Setiap negeri mendapat petak bersaiz sama. Pada peta sebenar, tempat kecil seperti Putrajaya dan Kuala Lumpur hampir hilang. Di sini ia mendapat ruang yang sama.'
+                  : 'Every state gets the same size tile. On a real map, small places like Putrajaya and Kuala Lumpur almost disappear. Here they get equal space.'}
               </p>
             </div>
           </div>
@@ -1280,8 +1299,8 @@ function calloutBox(centerX: number, svgWidth: number, preferRight: boolean) {
 
       <div className="map-footnote">
         {lang === 'ms'
-          ? 'Klik sebuah negeri untuk memuatkan butirannya pada panel di bawah. Skor ini membandingkan negeri antara satu sama lain — ia bukan had rasmi bilangan pelawat yang boleh ditampung sesebuah tempat.'
-          : 'Click a state to load its details in the panels below. These scores compare states against each other — they are not official limits on how many visitors a place can take.'}
+          ? 'Klik sebuah negeri untuk memuatkan butirannya pada panel di bawah. Skor ini membandingkan negeri antara satu sama lain. Ia bukan had rasmi bilangan pelawat yang boleh ditampung sesebuah tempat.'
+          : 'Click a state to load its details in the panels below. These scores compare states against each other. They are not official limits on how many visitors a place can take.'}
       </div>
     </div>
   )
@@ -1572,8 +1591,8 @@ function PortfolioVega({ states }: { states: StateRecord[] }) {
     },
     'Grow selectively': {
       action: {
-        ms: 'Kapasiti tinggi — pasarkan secara aktif & tarik pelaburan hasil tinggi',
-        en: 'Plenty of room — promote it, and aim for visitors who stay longer and spend more',
+        ms: 'Kapasiti tinggi: pasarkan secara aktif & tarik pelaburan hasil tinggi',
+        en: 'Plenty of room: promote it, and aim for visitors who stay longer and spend more',
       },
       color: '#0d9488',
       bgColor: '#f0fdfa',
@@ -1581,8 +1600,8 @@ function PortfolioVega({ states }: { states: StateRecord[] }) {
     },
     'Protect value': {
       action: {
-        ms: 'Aset warisan & ekologi rapuh — utamakan pemuliharaan berbanding jumlah massa',
-        en: 'Fragile heritage and nature — protect it rather than chase visitor numbers',
+        ms: 'Aset warisan & ekologi rapuh: utamakan pemuliharaan berbanding jumlah massa',
+        en: 'Fragile heritage and nature: protect it rather than chase visitor numbers',
       },
       color: '#b9821f',
       bgColor: '#fefce8',
@@ -1735,15 +1754,15 @@ function FlowVega() {
         <span>{lang === 'ms' ? 'Sejauh mana data ini penting:' : 'How much this data matters:'}</span>
         <span className="matrix-legend-item">
           <span className="matrix-legend-swatch" style={{ background: '#e5f4f0' }} />
-          {lang === 'ms' ? 'Bawah 40% — kecil' : 'Under 40% — minor'}
+          {lang === 'ms' ? 'Bawah 40%: kecil' : 'Under 40%: minor'}
         </span>
         <span className="matrix-legend-item">
           <span className="matrix-legend-swatch" style={{ background: '#5eb3a4' }} />
-          {lang === 'ms' ? '40–69% — menyumbang' : '40–69% — contributes'}
+          {lang === 'ms' ? '40–69%: menyumbang' : '40–69%: contributes'}
         </span>
         <span className="matrix-legend-item">
           <span className="matrix-legend-swatch" style={{ background: '#0f4f45' }} />
-          <strong>{lang === 'ms' ? '70%+ — faktor penentu' : '70%+ — the deciding factor'}</strong>
+          <strong>{lang === 'ms' ? '70%+: faktor penentu' : '70%+: the deciding factor'}</strong>
         </span>
       </div>
 
@@ -1909,12 +1928,12 @@ const AIR_WATCH_LEVEL = 50
 // Keep the formula (it is the term) and add a two-word plain gloss. Subscripts
 // match the summary paragraph below the chart.
 const POLLUTANT_LABELS: Record<string, { en: string; ms: string }> = {
-  CO: { en: 'CO — carbon monoxide', ms: 'CO — karbon monoksida' },
-  NO2: { en: 'NO₂ — traffic fumes', ms: 'NO₂ — asap kenderaan' },
-  O3: { en: 'O₃ — ground ozone', ms: 'O₃ — ozon permukaan' },
-  'PM 10': { en: 'PM10 — coarse dust', ms: 'PM10 — habuk kasar' },
-  'PM 2.5': { en: 'PM2.5 — fine dust', ms: 'PM2.5 — habuk halus' },
-  SO2: { en: 'SO₂ — industrial fumes', ms: 'SO₂ — asap industri' },
+  CO: { en: 'CO (carbon monoxide)', ms: 'CO (karbon monoksida)' },
+  NO2: { en: 'NO₂ (traffic fumes)', ms: 'NO₂ (asap kenderaan)' },
+  O3: { en: 'O₃ (ground ozone)', ms: 'O₃ (ozon permukaan)' },
+  'PM 10': { en: 'PM10 (coarse dust)', ms: 'PM10 (habuk kasar)' },
+  'PM 2.5': { en: 'PM2.5 (fine dust)', ms: 'PM2.5 (habuk halus)' },
+  SO2: { en: 'SO₂ (industrial fumes)', ms: 'SO₂ (asap industri)' },
 }
 
 function pollutantLabel(key: string, lang: 'en' | 'ms') {
@@ -1972,8 +1991,8 @@ function EnvironmentVega({ environment }: { environment?: DashboardData['environ
             axis: {
               title:
                 lang === 'ms'
-                  ? 'Berapa jauh di atas aras biasa — 0 hingga 100, rendah lebih baik →'
-                  : 'How far above its usual level — 0 to 100, lower is better →',
+                  ? 'Berapa jauh di atas aras biasa (0 hingga 100, rendah lebih baik) →'
+                  : 'How far above its usual level (0 to 100, lower is better) →',
               tickCount: 5,
               labelFontSize: 11,
               titleFontSize: 12,
@@ -2072,8 +2091,8 @@ function ForecastPanel({ data }: { data: DashboardData }) {
             </span>
             <small>
               {lang === 'ms'
-                ? `Empat suku akan datang berjumlah kira-kira ${horizonTotal.toFixed(0)} juta lawatan — ${horizonFrom} hingga ${horizonTo}.`
-                : `The next four quarters add up to about ${horizonTotal.toFixed(0)} million visits — ${horizonFrom} to ${horizonTo}.`}
+                ? `Empat suku akan datang berjumlah kira-kira ${horizonTotal.toFixed(0)} juta lawatan (${horizonFrom} hingga ${horizonTo}).`
+                : `The next four quarters add up to about ${horizonTotal.toFixed(0)} million visits (${horizonFrom} to ${horizonTo}).`}
             </small>
           </div>
           <span
@@ -2107,7 +2126,7 @@ function ForecastPanel({ data }: { data: DashboardData }) {
         <div className="forecast-drivers">
           <div className="driver-card">
             <small>{lang === 'ms' ? 'ARAH TERKINI' : 'RECENT TREND'}</small>
-            <strong>{momentumPct ? `${momentumPct}%` : '—'}</strong>
+            <strong>{momentumPct ? `${momentumPct}%` : 'N/A'}</strong>
             <span>
               {lang === 'ms'
                 ? 'Perubahan lawatan sepanjang empat suku terakhir'
@@ -2152,9 +2171,9 @@ function ForecastPanel({ data }: { data: DashboardData }) {
               <span className="stat-badge-dot" aria-hidden="true" style={{ background: '#10b981' }} />
               <strong>
                 {lang === 'ms' ? 'Tekanan udara ' : 'Air stress '}
-                {airScore !== undefined ? Math.round(airScore) : '—'} / 100
+                {airScore !== undefined ? Math.round(airScore) : 'N/A'} / 100
               </strong>
-              <small>{lang === 'ms' ? 'Rendah — rendah lebih baik' : 'Low — lower is better'}</small>
+              <small>{lang === 'ms' ? 'Rendah: rendah lebih baik' : 'Low: lower is better'}</small>
             </span>
             {airAsOf && <DataStatusBadge status="stale" source="OpenDOSM air monitoring stations" period={airAsOf} />}
           </div>
@@ -2179,14 +2198,14 @@ function ForecastPanel({ data }: { data: DashboardData }) {
         <p className="env-summary-text">
           {lang === 'ms' ? (
             <>
-              Kualiti udara baik secara keseluruhan — <strong>{airScore !== undefined ? Math.round(airScore) : '—'} daripada 100</strong> pada indeks tekanan kami, di mana nilai rendah lebih baik.{' '}
+              Kualiti udara baik secara keseluruhan: <strong>{airScore !== undefined ? Math.round(airScore) : 'N/A'} daripada 100</strong> pada indeks tekanan kami, di mana nilai rendah lebih baik.{' '}
               <strong>{airUnder.length} daripada {airEntries.length}</strong> bahan pencemar berada di bawah aras perhatian {AIR_WATCH_LEVEL}.
               {airOver.length > 0 && <> Hanya <strong>{airOverText}</strong> melepasi aras itu.</>}
               {airAsOf && <> Bacaan ini adalah peringkat nasional dan bertarikh {airAsOf}, jadi anggaplah ia sebagai konteks latar belakang dan bukan keadaan semasa.</>}
             </>
           ) : (
             <>
-              Air quality is good overall — <strong>{airScore !== undefined ? Math.round(airScore) : '—'} out of 100</strong> on our stress index, where lower is better.{' '}
+              Air quality is good overall: <strong>{airScore !== undefined ? Math.round(airScore) : 'N/A'} out of 100</strong> on our stress index, where lower is better.{' '}
               <strong>{airUnder.length} of the {airEntries.length}</strong> pollutants sit under the watch level of {AIR_WATCH_LEVEL}.
               {airOver.length > 0 && <> Only <strong>{airOverText}</strong> is over it.</>}
               {airAsOf && <> These readings are national and date from {airAsOf}, so treat them as background context rather than current conditions.</>}
@@ -2397,7 +2416,7 @@ function DashboardContent() {
           role="button"
           tabIndex={0}
           onKeyDown={(e) => e.key === 'Enter' && setTab('overview')}
-          title="Destinasi Seimbang — Pelancongan Lestari Kemakmuran Bersama"
+          title="Destinasi Seimbang: Pelancongan Lestari Kemakmuran Bersama"
         >
           <div className="brand-logo-text">
             <div className="brand-wordmark">
@@ -2626,7 +2645,7 @@ function DashboardContent() {
                   <div className="panel-heading">
                     <div>
                       <span className="eyebrow">{lang === 'ms' ? 'Destinasi dipilih' : 'Selected destination'}</span>
-                      <h2>{selectedState?.state || '—'}</h2>
+                      <h2>{selectedState?.state || 'N/A'}</h2>
                     </div>
                     <span className={`confidence ${selectedState?.confidence?.toLowerCase()}`}>
                       {lang === 'ms' ? 'Keyakinan data: ' : 'Data confidence: '}{translateConfidence(selectedState?.confidence ?? '').toLowerCase()}
@@ -2716,6 +2735,8 @@ function DashboardContent() {
             <PolicyOptionsView
               stateName={selected}
               options={(data.policy_templates?.[selected] ?? data.policy_templates?.[Object.keys(data.policy_templates ?? {})[0]] ?? []) as any}
+              states={data.states.map((s) => s.state)}
+              onSelectState={setSelected}
             />
           )}
 
@@ -2735,8 +2756,8 @@ function DashboardContent() {
                   </h2>
                   <p>
                     {lang === 'ms'
-                      ? 'Cuba alihkan promosi dan pelaburan antara negeri dan lihat bagaimana skor tekanan bertindak balas. Setiap pengiraan ditunjukkan dalam tab Kaedah — tiada apa yang disembunyikan.'
-                      : 'Try moving promotion and investment between states and see how the pressure scores respond. Every calculation is shown in the Method tab — nothing is hidden.'}
+                      ? 'Cuba alihkan promosi dan pelaburan antara negeri dan lihat bagaimana skor tekanan bertindak balas. Setiap pengiraan ditunjukkan dalam tab Kaedah, tiada apa yang disembunyikan.'
+                      : 'Try moving promotion and investment between states and see how the pressure scores respond. Every calculation is shown in the Method tab, nothing is hidden.'}
                   </p>
                 </div>
                 <div className="scenario-orbit">
@@ -2768,8 +2789,8 @@ function DashboardContent() {
                     onChange={(event) => setPromotion(+event.target.value)}
                   />
                   <div className="range-note">
-                    <span>{lang === 'ms' ? '0% — promosi sama rata' : '0% — promote everywhere equally'}</span>
-                    <span>{lang === 'ms' ? '30% — alih sepertiga' : '30% — move a third away'}</span>
+                    <span>{lang === 'ms' ? '0%: promosi sama rata' : '0%: promote everywhere equally'}</span>
+                    <span>{lang === 'ms' ? '30%: alih sepertiga' : '30%: move a third away'}</span>
                   </div>
                   <label>
                     {lang === 'ms' ? 'Berapa banyak untuk dibelanjakan pada kapasiti berbanding promosi' : 'How much to spend on capacity instead of promotion'} <output>{capacity} / 100</output>
@@ -2782,8 +2803,8 @@ function DashboardContent() {
                     onChange={(event) => setCapacity(+event.target.value)}
                   />
                   <div className="range-note">
-                    <span>{lang === 'ms' ? '0 — semua promosi' : '0 — all promotion'}</span>
-                    <span>{lang === 'ms' ? '100 — semua kapasiti' : '100 — all capacity'}</span>
+                    <span>{lang === 'ms' ? '0: semua promosi' : '0: all promotion'}</span>
+                    <span>{lang === 'ms' ? '100: semua kapasiti' : '100: all capacity'}</span>
                   </div>
                   <label>
                     {lang === 'ms' ? 'Anggap sesebuah negeri terlebih tekanan melebihi' : 'Treat a state as over-pressured above'} <output>{pressureCap}</output>
@@ -2796,8 +2817,8 @@ function DashboardContent() {
                     onChange={(event) => setPressureCap(+event.target.value)}
                   />
                   <div className="range-note">
-                    <span>{lang === 'ms' ? '20 — lindungi awal' : '20 — protect early'}</span>
-                    <span>{lang === 'ms' ? '100 — biar berkembang' : '100 — let growth run'}</span>
+                    <span>{lang === 'ms' ? '20: lindungi awal' : '20: protect early'}</span>
+                    <span>{lang === 'ms' ? '100: biar berkembang' : '100: let growth run'}</span>
                   </div>
                   <button className="primary-button full" onClick={runScenario}>
                     <Sparkles size={16} /> {lang === 'ms' ? 'Jalankan' : 'Run'}
@@ -2898,7 +2919,7 @@ function DashboardContent() {
               dataQuality={data.data_quality as any}
               dataDictionary={data.data_dictionary as any}
               dataAsOf={data.data_as_of || 'Latest DOSM extract'}
-              generatedAt={data.generated_at || '—'}
+              generatedAt={data.generated_at || 'N/A'}
             />
           )}
         </section>
@@ -2935,7 +2956,7 @@ function DashboardContent() {
             {copilotAnswer && (
               <div className="copilot-answer">
                 <div className="copilot-ai-badge">
-                  <Sparkles size={12} /> {lang === 'ms' ? 'Dijana AI — memerlukan semakan manusia sebelum kegunaan keputusan' : 'AI Generated — requires human review before decision use'}
+                  <Sparkles size={12} /> {lang === 'ms' ? 'Dijana AI: memerlukan semakan manusia sebelum kegunaan keputusan' : 'AI Generated: requires human review before decision use'}
                 </div>
                 {typeof copilotAnswer === 'string' ? (
                   <p>{copilotAnswer}</p>

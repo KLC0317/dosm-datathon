@@ -86,7 +86,7 @@ export function AlertPanel({ alerts, onSelectState }: { alerts: Alert[]; onSelec
                     <div className="alert-card-left">
                       <AlertTriangle size={14} style={{ color: SEVERITY_COLOR[alert.severity] }} />
                       <div>
-                        <strong>{alert.state} — {alert.metric}</strong>
+                        <strong>{alert.state}: {alert.metric}</strong>
                         <span className={`severity-tag sev-${alert.severity}`}>{translateSeverity(alert.severity)}</span>
                       </div>
                     </div>
