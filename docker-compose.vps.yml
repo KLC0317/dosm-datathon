@@ -1,0 +1,44 @@
+services:
+  api:
+    container_name: dosm-api
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file: .env
+    volumes:
+      - dosm-data:/data
+    restart: unless-stopped
+    networks:
+      - default
+      - n8n_default
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    container_name: dosm-web
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    environment:
+      - API_INTERNAL_URL=http://dosm-api:8000
+      # Docker auto-injects HOSTNAME=<container id>, which Next's standalone
+      # server.js uses as its bind address instead of all interfaces. Override it.
+      - HOSTNAME=0.0.0.0
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - default
+      - n8n_default
+
+volumes:
+  dosm-data:
+
+networks:
+  default: {}
+  n8n_default:
+    external: true

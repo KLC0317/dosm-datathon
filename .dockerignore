@@ -1,0 +1,13 @@
+.git
+**/__pycache__
+**/*.pyc
+frontend/node_modules
+frontend/.next
+data/*.csv
+data/*.xlsx
+data/*.pdf
+data/dashboard.db
+submission
+.env
+.env.*
+!.env.example

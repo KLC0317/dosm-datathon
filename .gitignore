@@ -41,11 +41,19 @@ wheels/
 # Environment variables & secrets
 .env
 .env*.local
+.env.prodcution
+.env.*.deploy
 frontend/.env
 frontend/.env*.local
 backend/.env
 backend/.env*.local
+backend/gemini_key
+backend/gemini_key.txt
 !.env.example
+
+# Runtime persistence
+data/*.db
+data/*.db-*
 
 # Embedded repository
 /FIT3179-DV2/

@@ -7,6 +7,8 @@ from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from backend import ai_service, db
+
 ROOT = Path(__file__).resolve().parents[1]
 DATA_FILE = ROOT / "data" / "dashboard_data.json"
 
@@ -21,7 +23,12 @@ app.add_middleware(
 
 
 def load_data():
-    return json.loads(DATA_FILE.read_text(encoding="utf-8"))
+    return db.load_dashboard()
+
+
+@app.on_event("startup")
+def initialize_storage():
+    db.initialize()
 
 
 class ScenarioRequest(BaseModel):
@@ -41,7 +48,19 @@ class AskRequest(BaseModel):
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "service": "destinasi-seimbang", "data_file": DATA_FILE.name}
+    storage = db.status()
+    return {
+        "status": "ok",
+        "service": "destinasi-seimbang",
+        "data_file": DATA_FILE.name,
+        "database": storage,
+        "ai": ai_service.configuration(),
+    }
+
+
+@app.get("/api/ai/status")
+def ai_status():
+    return {"ai": ai_service.configuration(), "database": db.status()}
 
 
 @app.get("/api/datasets")
@@ -54,6 +73,12 @@ def datasets():
         "state_count": len(data["states"]),
         "latest_quarter": data.get("latest_quarter"),
     }
+
+
+@app.get("/api/dashboard")
+def dashboard():
+    """Return the SQLite-backed dashboard document for the frontend runtime."""
+    return load_data()
 
 
 @app.get("/api/overview")
@@ -92,26 +117,14 @@ def states(
     quadrant: str | None = Query(default=None),
     sort: str = Query(default="pressure_score"),
 ):
-    items = load_data()["states"]
-    if quadrant:
-        items = [state for state in items if state["quadrant"] == quadrant]
-    allowed = {
-        "pressure_score",
-        "prosperity_score",
-        "visitors_2025_million",
-        "visitor_growth_yoy",
-        "tourist_mix_pct",
-        "cpi_yoy",
-    }
-    key = sort if sort in allowed else "pressure_score"
-    return sorted(items, key=lambda state: state[key], reverse=True)
+    return db.list_states(quadrant=quadrant, sort=sort)
 
 
 @app.get("/api/states/{state_name}")
 def state_detail(state_name: str):
-    for state in load_data()["states"]:
-        if state["state"].lower() == state_name.lower():
-            return state
+    state = db.get_state(state_name)
+    if state:
+        return state
     return {"error": "State not found"}
 
 
@@ -206,14 +219,4 @@ def brief(request: BriefRequest):
 @app.post("/api/ask")
 def ask(request: AskRequest):
     data = load_data()
-    question = request.question.lower()
-    state = next((s for s in data["states"] if s["state"].lower() in question), None)
-    if state is None:
-        state = max(data["states"], key=lambda s: s["pressure_score"])
-    if any(word in question for word in ("pressure", "risk", "crowd", "capacity")):
-        answer = f"{state['state']} has a relative pressure score of {state['pressure_score']}/100. The main signals are {state['visitors_per_100_residents']:.1f} visitors per 100 residents, {state['visitor_growth_yoy']:+.1f}% visitor growth, and {state['cpi_yoy']:+.2f}% state CPI movement. Recommended direction: {state['action'].lower()}."
-    elif any(word in question for word in ("grow", "opportunity", "prosper", "value")):
-        answer = f"{state['state']} has a prosperity potential score of {state['prosperity_score']}/100 and a tourist mix of {state['tourist_mix_pct']:.1f}%. The dashboard recommends {state['action'].lower()}: {state['action_detail']}"
-    else:
-        answer = f"For {state['state']}, the dashboard suggests {state['action'].lower()}. Pressure is {state['pressure_score']}/100 and prosperity potential is {state['prosperity_score']}/100. Ask about pressure, capacity, growth or value for a more focused answer."
-    return {"answer": answer, "state": state["state"], "source": data["sources"][0]}
+    return ai_service.answer(request.question, data)

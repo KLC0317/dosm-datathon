@@ -28,12 +28,14 @@ The dashboard also has a static fallback, so the evidence view still renders if 
 
 - `GET /api/health` â€” service health
 - `GET /api/datasets` â€” data vintage, sources and latest quarterly pulse
+- `GET /api/dashboard` â€” full SQLite-backed dashboard extract for the frontend
 - `GET /api/overview` â€” national indicators and quadrant counts
 - `GET /api/states` â€” sortable/filterable state records
 - `GET /api/states/{state}` â€” one state evidence record
 - `POST /api/scenario` â€” pressure/prosperity intervention simulation
 - `POST /api/brief` â€” source-cited Markdown policy brief for download
-- `POST /api/ask` â€” deterministic source-aware policy copilot response
+- `POST /api/ask` â€” grounded Gemini policy copilot, with deterministic fallback
+- `GET /api/ai/status` â€” model configuration and SQLite storage status
 
 ## Refresh the data extract
 
@@ -53,7 +55,11 @@ python backend/prepare_data.py
 Copy-Item data/dashboard_data.json frontend/public/dashboard_data.json -Force
 ```
 
-`backend/prepare_data.py` reads the official DTS workbook tables, joins the current population and CPI extracts, calculates the relative pressure/prosperity signals, builds a four-quarter rolling-backtest ETS/AutoReg ensemble forecast with uncertainty and driver explanations, summarises OpenDOSM air pollution, and writes `dashboard_data.json`.
+`backend/prepare_data.py` reads the official DTS workbook tables, joins the current population and CPI extracts, calculates the relative pressure/prosperity signals, builds a four-quarter rolling-backtest ETS/AutoReg ensemble forecast with uncertainty and driver explanations, summarises OpenDOSM air pollution, and writes `dashboard_data.json`. On API startup, that extract is projected into SQLite at `data/dashboard.db`; the API reads the SQLite projection for state queries and retains the full extract for forecast and policy metadata. The database is refreshed automatically when the extract hash changes.
+
+## Gemini policy copilot
+
+Set `GEMINI_KEY` in a local `.env` file. The backend uses `gemini-3.1-flash-lite` through Gemini's REST `generateContent` API and sends only a compact, approved DOSM context containing the selected state, national indicators, forecast summary, environment summary and source metadata. The model must return structured evidence, interpretation, limitations and next action fields. If the key is absent, the request fails, or the model response is invalid, `/api/ask` returns the auditable deterministic response instead. No key is exposed to the frontend.
 
 ## Production shape
 

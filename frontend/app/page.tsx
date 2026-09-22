@@ -36,6 +36,7 @@ import { EvidenceMethodView } from './components/EvidenceMethodView'
 import { PolicyOptionsView } from './components/PolicyOptionsView'
 import { ScoreDecomposition } from './components/ScoreDecomposition'
 import { LanguageProvider, useLanguage } from './lib/i18n'
+import { ChatbotWidget } from './components/ChatbotWidget'
 
 type ScoreInput = {
   input: string; raw: number; raw_unit: string; normalised: number
@@ -2475,6 +2476,14 @@ function DashboardContent() {
           {data.alerts && data.alerts.length > 0 && (
             <AlertPanel alerts={data.alerts as any} onSelectState={(s) => { setSelected(s); setTab('overview') }} />
           )}
+          <button
+            className="icon-button"
+            aria-label={lang === 'ms' ? 'Buka Pembantu AI DOSM' : 'Open DOSM AI Assistant'}
+            onClick={() => setCopilotOpen((prev) => !prev)}
+            title={lang === 'ms' ? 'Pembantu AI DOSM' : 'DOSM AI Assistant'}
+          >
+            <Sparkles size={18} />
+          </button>
           <button className="icon-button" aria-label={t('printAria')} onClick={handlePrint} title={t('printTitle')}>
             <Printer size={18} />
           </button>
@@ -2925,76 +2934,23 @@ function DashboardContent() {
         </section>
       </div>
 
-      {copilotOpen && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={lang === 'ms' ? 'Kopilot dasar' : 'Policy copilot'}>
-          <div className="modal-card">
-            <div className="modal-heading">
-              <div>
-                <span className="eyebrow">{lang === 'ms' ? 'PEMBANTU SUMBER BERASAS' : 'SOURCE-AWARE ASSISTANT'}</span>
-                <h2>{lang === 'ms' ? 'Kopilot dasar' : 'Policy copilot'}</h2>
-              </div>
-              <button className="modal-close" onClick={() => setCopilotOpen(false)} aria-label={lang === 'ms' ? 'Tutup' : 'Close'}>
-                ×
-              </button>
-            </div>
-            <p className="modal-copy">
-              {lang === 'ms'
-                ? 'Tanya tentang mana-mana negeri, tekanan permintaan, perlindungan kapasiti, pertumbuhan, atau nilai tempatan. Maklum balas berpaksikan sepenuhnya kepada ekstrak rasmi DOSM.'
-                : 'Ask about any state, demand pressure, capacity safeguards, growth, or local value. Responses are strictly grounded in the official DOSM extract.'}
-            </p>
-            <form onSubmit={askCopilot} className="copilot-form">
-              <input
-                autoFocus
-                value={copilotQuestion}
-                onChange={(event) => setCopilotQuestion(event.target.value)}
-                placeholder={lang === 'ms' ? `cth. Mengapa ${selectedState?.state ?? 'Putrajaya'} mengalami tekanan?` : `e.g. Why is ${selectedState?.state ?? 'Putrajaya'} under pressure?`}
-              />
-              <button className="primary-button" type="submit">
-                <Sparkles size={16} /> {lang === 'ms' ? 'Tanya' : 'Ask'}
-              </button>
-            </form>
-            {copilotAnswer && (
-              <div className="copilot-answer">
-                <div className="copilot-ai-badge">
-                  <Sparkles size={12} /> {lang === 'ms' ? 'Dijana AI: memerlukan semakan manusia sebelum kegunaan keputusan' : 'AI Generated: requires human review before decision use'}
-                </div>
-                {typeof copilotAnswer === 'string' ? (
-                  <p>{copilotAnswer}</p>
-                ) : (
-                  <>
-                    {copilotAnswer.evidence && (
-                      <div className="copilot-section">
-                        <span className="eyebrow">{lang === 'ms' ? 'Bukti' : 'Evidence'}</span>
-                        <p>{copilotAnswer.evidence}</p>
-                      </div>
-                    )}
-                    {copilotAnswer.interpretation && (
-                      <div className="copilot-section">
-                        <span className="eyebrow">{lang === 'ms' ? 'Tafsiran' : 'Interpretation'}</span>
-                        <p>{copilotAnswer.interpretation}</p>
-                      </div>
-                    )}
-                    {copilotAnswer.limitations && (
-                      <div className="copilot-section caveat-section">
-                        <span className="eyebrow"><TriangleAlert size={11} /> {lang === 'ms' ? 'Batasan' : 'Limitations'}</span>
-                        <p>{copilotAnswer.limitations}</p>
-                      </div>
-                    )}
-                    {copilotAnswer.next_action && (
-                      <div className="copilot-section">
-                        <span className="eyebrow">{lang === 'ms' ? 'Tindakan seterusnya' : 'Next action'}</span>
-                        <p>{copilotAnswer.next_action}</p>
-                      </div>
-                    )}
-                    {copilotAnswer.answer && <p>{copilotAnswer.answer}</p>}
-                  </>
-                )}
-                <small>{lang === 'ms' ? 'Perkhidmatan bukti tempatan berketetapan · Data rasmi DOSM' : 'Deterministic local evidence service · DOSM official data'}</small>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Destinasi AI Floating Chatbot on bottom right */}
+      <ChatbotWidget
+        isOpen={copilotOpen}
+        onToggle={() => setCopilotOpen((prev) => !prev)}
+        selectedState={
+          selectedState
+            ? {
+                state: selectedState.state,
+                pressure_score: selectedState.pressure_score,
+                prosperity_score: selectedState.prosperity_score,
+                quadrant: selectedState.quadrant,
+                action: selectedState.action,
+              }
+            : null
+        }
+        states={data.states.map((s) => s.state)}
+      />
 
       {profileOpen && (
         <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={lang === 'ms' ? 'Status ruang kerja' : 'Workspace status'}>
